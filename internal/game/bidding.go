@@ -4,11 +4,12 @@ import "fmt"
 
 // Bid represents a single bid in the auction
 type Bid struct {
-	Level    int  // 1-7
-	Strain   Suit // Clubs, Diamonds, Hearts, Spades, or NoTrump
-	Pass     bool // True if this is a pass
-	Double   bool // True if this is a double
-	Redouble bool // True if this is a redouble
+	Level    int      // 1-7
+	Strain   Suit     // Clubs, Diamonds, Hearts, Spades, or NoTrump
+	Position Position // The player who made the bid
+	Pass     bool     // True if this is a pass
+	Double   bool     // True if this is a double
+	Redouble bool     // True if this is a redouble
 }
 
 // NewPass creates a new pass bid
@@ -44,10 +45,12 @@ func (b Bid) String() string {
 	case b.Redouble:
 		return "Redouble"
 	default:
-		strainNames := []string{"♣", "♦", "♥", "♠", "NT"}
-		strain := strainNames[b.Strain]
-		if b.Strain == 4 { // No Trump
-			strain = "NT"
+		strainNames := []string{"C", "D", "H", "S", "NT"}
+		var strain string
+		if b.Strain >= 0 && int(b.Strain) < len(strainNames) {
+			strain = strainNames[b.Strain]
+		} else {
+			strain = "?"
 		}
 		return fmt.Sprintf("%d%s", b.Level, strain)
 	}

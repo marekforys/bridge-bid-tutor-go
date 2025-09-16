@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
+	"github.com/manifoldco/promptui"
 	"github.com/yourusername/bridge-bid-tutor-go/internal/game"
 )
 
@@ -63,13 +62,10 @@ func NewGame() *Game {
 
 // Start begins the game loop
 func (g *Game) Start() error {
-	reader := bufio.NewReader(os.Stdin)
-
 	// Game loop
 	for !g.Auction.IsAuctionComplete() {
 		// Get current player
 		currentPlayer := g.Players[g.Dealer]
-		g.Dealer = (g.Dealer + 1) % 4
 
 		// Display game state
 		g.displayGameState(currentPlayer)
@@ -78,33 +74,42 @@ func (g *Game) Start() error {
 		var bid game.Bid
 		if currentPlayer.IsHuman() {
 			// Human player's turn
-			for {
-				fmt.Print("Enter your bid (e.g., '1H', 'pass', 'double'): ")
-				input, _ := reader.ReadString('\n')
-				input = strings.TrimSpace(input)
-
-				var err error
-				bid, err = parseBid(input)
-				if err != nil {
-					fmt.Printf("Invalid bid: %v\n", err)
-					continue
-				}
-
-				if !g.Auction.IsValidBid(bid) {
-					fmt.Println("Invalid bid: Must be higher than previous bid")
-					continue
-				}
-
-				break
+			prompt := promptui.Prompt{
+				Label: "Enter your bid (e.g., '1H', 'pass', 'double')",
+				Validate: func(input string) error {
+					parsedBid, err := parseBid(input)
+					if err != nil {
+						return err
+					}
+					if !g.Auction.IsValidBid(parsedBid) {
+						return fmt.Errorf("must be higher than previous bid")
+					}
+					return nil
+				},
 			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				// Handle user interruption (e.g., Ctrl+C)
+				if err == promptui.ErrInterrupt {
+					fmt.Println("\nGame aborted. Goodbye!")
+					return nil
+				}
+				return fmt.Errorf("prompt failed: %w", err)
+			}
+
+			bid, _ = parseBid(result) // We can ignore the error here because validation already passed
+
 		} else {
 			// AI's turn
 			bid = currentPlayer.MakeBid(g.Auction)
-			fmt.Printf("%s bids: %s\n", currentPlayer.Position, bid)
+			fmt.Printf("\n%s bids: %s\n", currentPlayer.Position, bid)
 		}
 
 		// Add bid to auction
+		bid.Position = currentPlayer.Position
 		g.Auction.AddBid(bid)
+		g.Dealer = (g.Dealer + 1) % 4
 
 		// Add a newline for better readability
 		fmt.Println()
@@ -124,9 +129,8 @@ func (g *Game) displayGameState(currentPlayer *game.Player) {
 
 	// Show auction history
 	fmt.Println("Auction:")
-	for i, bid := range g.Auction.Bids {
-		pos := game.Position((int(g.Dealer) + i) % 4)
-		fmt.Printf("%s: %s\n", pos, bid)
+	for _, bid := range g.Auction.Bids {
+		fmt.Printf("%s: %s\n", bid.Position, bid)
 	}
 	fmt.Println()
 
