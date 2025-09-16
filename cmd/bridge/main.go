@@ -121,6 +121,20 @@ func (g *Game) Start() error {
 
 	g.displayAllHands()
 
+	// Calculate and display the score
+	score := game.CalculateScore(lastBid, game.NotVulnerable)
+	fmt.Println("\n--- Score ---")
+	fmt.Printf("Contract: %s\n", lastBid)
+	fmt.Printf("Result: %d points\n", score.TotalScore)
+	fmt.Printf("(Trick Score: %d, Bonus: %d)\n", score.TrickScore, score.BonusScore)
+	if score.MadeGame {
+		fmt.Println("Game bonus awarded!")
+	}
+	if score.MadeSlam {
+		fmt.Println("Slam bonus awarded!")
+	}
+	fmt.Println("------------------------------")
+
 	return nil
 }
 
