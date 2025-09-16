@@ -107,3 +107,19 @@ func (h *Hand) GetSuit(s Suit) string {
 	}
 	return strings.Join(cards, " ")
 }
+
+// IsBalanced returns true if the hand is balanced.
+// A balanced hand has no voids, no singletons, and at most one doubleton.
+func (h *Hand) IsBalanced() bool {
+	doubletonCount := 0
+	for s := Clubs; s <= Spades; s++ {
+		count := h.SuitCount(s)
+		if count == 0 || count == 1 {
+			return false // No voids or singletons
+		}
+		if count == 2 {
+			doubletonCount++
+		}
+	}
+	return doubletonCount <= 1
+}
