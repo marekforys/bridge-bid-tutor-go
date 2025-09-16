@@ -274,6 +274,45 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
 		// Add logic for strong hand (18+ HCP) rebids here.
 	}
 
+	// --- Opener's continuations after 1♣ - 1M (positive) ---
+	if myLastBid.Level == 1 && myLastBid.Strain == Clubs && partnerLastBid.Level == 1 && (partnerLastBid.Strain == Hearts || partnerLastBid.Strain == Spades) {
+		major := partnerLastBid.Strain
+		support := distribution[major]
+		// Prefer raising with support.
+		if support >= 4 || (support >= 3 && hcp >= 13) {
+			// Invitational raise to 3M with extra values or 4-card support.
+			if support >= 4 || hcp >= 14 {
+				return NewBid(3, major)
+			}
+			return NewBid(2, major)
+		}
+		// No support: rebid NT with balanced minimum
+		if p.Hand.IsBalanced() && hcp >= 11 && hcp <= 14 {
+			return NewBid(1, 4) // 1NT
+		}
+		// Otherwise, show a real minor.
+		if distribution[Clubs] >= 5 {
+			return NewBid(2, Clubs)
+		}
+		if distribution[Diamonds] >= 4 {
+			return NewBid(2, Diamonds)
+		}
+	}
+
+	// --- Opener's continuations after 1♣ - 1NT (7-10 balanced, no major) ---
+	if myLastBid.Level == 1 && myLastBid.Strain == Clubs && partnerLastBid.Level == 1 && partnerLastBid.Strain == 4 {
+		// With longer clubs, suggest 2C; else with diamonds, 2D; with strong balanced, 2NT.
+		if distribution[Clubs] >= 5 {
+			return NewBid(2, Clubs)
+		}
+		if distribution[Diamonds] >= 4 {
+			return NewBid(2, Diamonds)
+		}
+		if p.Hand.IsBalanced() && hcp >= 18 {
+			return NewBid(2, 4) // 2NT as strong balanced follow-up
+		}
+	}
+
 	// --- Opener's Rebid after 1NT opening ---
 	if myLastBid.Level == 1 && myLastBid.Strain == 4 { // We opened 1NT
 		// Respond to Jacoby transfers from partner.
