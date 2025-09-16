@@ -62,28 +62,49 @@ func (p Position) Partner() Position {
 func (p *Player) MakeBid(auction *Auction) Bid {
 	hcp, distribution := p.Hand.Evaluate()
 
-	// Determine if our partner has bid before.
-	var partnerBid *Bid
+	// Find our last bid and our partner's last bid.
+	var myLastBid, partnerLastBid *Bid
 	for i := len(auction.Bids) - 1; i >= 0; i-- {
-		bid := auction.Bids[i]
-		if bid.Position == p.Position.Partner() {
-			if !bid.Pass {
-				partnerBid = &bid
-				break
-			}
-		} else if bid.Position == p.Position {
-			// We have bid since our partner's last bid.
-			break
+		b := &auction.Bids[i]
+		if myLastBid == nil && b.Position == p.Position {
+			myLastBid = b
+		}
+		if partnerLastBid == nil && b.Position == p.Position.Partner() {
+			partnerLastBid = b
+		}
+		if myLastBid != nil && partnerLastBid != nil {
+			break // Found both, can stop searching.
 		}
 	}
 
-	// If partner has made a bid, we respond.
-	if partnerBid != nil {
-		return p.makeResponseBid(auction, partnerBid, hcp, distribution)
+	// Determine the bidding context.
+	partnerIsLastBidder := false
+	if len(auction.Bids) > 0 {
+		lastBidder := auction.Bids[len(auction.Bids)-1].Position
+		partnerIsLastBidder = lastBidder == p.Position.Partner()
 	}
 
-	// If we are the first to bid in the partnership, we open.
-	return p.makeOpeningBid(auction, hcp, distribution)
+	if myLastBid == nil {
+		// We haven't bid yet.
+		if partnerLastBid == nil || !partnerIsLastBidder {
+			// It's our turn to open for the partnership.
+			return p.makeOpeningBid(auction, hcp, distribution)
+		} else {
+			// Partner opened, and it's our turn to respond.
+			return p.makeResponseBid(auction, partnerLastBid, hcp, distribution)
+		}
+	} else {
+		// We have bid before.
+		if partnerIsLastBidder {
+			// Partner just responded to our bid, so we must rebid.
+			return p.makeRebid(auction, myLastBid, partnerLastBid, hcp, distribution)
+		}
+		// An opponent has bid. For now, we will just pass.
+		// More advanced competitive bidding logic would go here.
+	}
+
+	// Default case, should not be reached in normal play.
+	return NewPass()
 }
 
 // makeOpeningBid handles the logic for making an opening bid using Polish Club principles.
@@ -152,8 +173,31 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 				return bid
 			}
 		}
-		// More complex responses (e.g., showing a major) can be added here.
+		// Positive responses: 7+ HCP.
+		if hcp >= 7 {
+			// Show a 4+ card major if available.
+			if distribution[Spades] >= 4 {
+				bid := NewBid(1, Spades)
+				if auction.IsValidBid(bid) {
+					return bid
+				}
+			}
+			if distribution[Hearts] >= 4 {
+				bid := NewBid(1, Hearts)
+				if auction.IsValidBid(bid) {
+					return bid
+				}
+			}
+			// Balanced hand with no major.
+			if hcp <= 10 && p.Hand.IsBalanced() {
+				bid := NewBid(1, 4) // 1NT
+				if auction.IsValidBid(bid) {
+					return bid
+				}
+			}
+		}
 	}
+
 
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
@@ -213,6 +257,47 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 	return NewPass()
 }
 
+
+// makeRebid handles the logic for making a rebid after our partner has responded.
+func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
+	// --- Opener's Rebid after 1♣ - 1♦ ---
+	if myLastBid.Level == 1 && myLastBid.Strain == Clubs && partnerLastBid.Level == 1 && partnerLastBid.Strain == Diamonds {
+		// We opened 1♣ and partner responded with a negative 1♦.
+		// Now we must clarify our opening.
+		if hcp >= 11 && hcp <= 14 {
+			// This was the "weak" variant of the 1♣ opening.
+			if p.Hand.IsBalanced() {
+				return NewBid(1, 4) // Rebid 1NT to show a balanced 11-14 HCP.
+			}
+			// Add logic for other weak, unbalanced hand types here.
+		}
+		// Add logic for strong hand (18+ HCP) rebids here.
+	}
+
+	// --- Opener's Rebid after 1NT opening ---
+	if myLastBid.Level == 1 && myLastBid.Strain == 4 { // We opened 1NT
+		// Respond to Jacoby transfers from partner.
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Diamonds { // Transfer to Hearts
+			return NewBid(2, Hearts)
+		}
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Hearts { // Transfer to Spades
+			return NewBid(2, Spades)
+		}
+
+		// Respond to Stayman (2C): show a 4-card major if present, else 2D.
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Clubs {
+			if distribution[Hearts] >= 4 {
+				return NewBid(2, Hearts)
+			}
+			if distribution[Spades] >= 4 {
+				return NewBid(2, Spades)
+			}
+			return NewBid(2, Diamonds)
+		}
+	}
+
+	return NewPass()
+}
 
 // IsHuman returns true if the player is human
 func (p *Player) IsHuman() bool {
