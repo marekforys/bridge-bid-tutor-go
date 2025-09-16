@@ -115,7 +115,11 @@ func (g *Game) Start() error {
 
 	// Auction is complete
 	fmt.Println("\nAuction complete!")
-	fmt.Println("Final contract:", g.Auction.Bids[len(g.Auction.Bids)-4])
+	lastBid, _ := g.Auction.LastNonPassBid()
+	fmt.Println("Final contract:", lastBid)
+	fmt.Println("------------------------------")
+
+	g.displayAllHands()
 
 	return nil
 }
@@ -141,6 +145,19 @@ func (g *Game) displayGameState(currentPlayer *game.Player) {
 		fmt.Println("Diamonds:", currentPlayer.Hand.GetSuit(game.Diamonds))
 		fmt.Println("Clubs:", currentPlayer.Hand.GetSuit(game.Clubs))
 		fmt.Println()
+	}
+}
+
+// displayAllHands shows all four hands at the end of the auction.
+func (g *Game) displayAllHands() {
+	fmt.Println("\n--- All Hands ---")
+	for _, player := range g.Players {
+		hcp, _ := player.Hand.Evaluate()
+		fmt.Printf("\n%s (HCP: %d)\n", player.Position, hcp)
+		fmt.Println("  Spades:  ", player.Hand.GetSuit(game.Spades))
+		fmt.Println("  Hearts:  ", player.Hand.GetSuit(game.Hearts))
+		fmt.Println("  Diamonds:", player.Hand.GetSuit(game.Diamonds))
+		fmt.Println("  Clubs:   ", player.Hand.GetSuit(game.Clubs))
 	}
 }
 

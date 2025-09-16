@@ -47,6 +47,12 @@ func (c Card) String() string {
 	return fmt.Sprintf("%s%s", rankSymbols[c.Rank-2], suitSymbols[c.Suit])
 }
 
+// RankString returns a string representation of the card's rank.
+func (c Card) RankString() string {
+	rankSymbols := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
+	return rankSymbols[c.Rank-2]
+}
+
 // Deck represents a deck of 52 playing cards
 type Deck []Card
 

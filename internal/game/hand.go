@@ -102,7 +102,7 @@ func (h *Hand) GetSuit(s Suit) string {
 	var cards []string
 	for _, card := range h.Cards {
 		if card.Suit == s {
-			cards = append(cards, card.String())
+			cards = append(cards, card.RankString())
 		}
 	}
 	return strings.Join(cards, " ")
