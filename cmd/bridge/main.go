@@ -103,7 +103,7 @@ func (g *Game) Start() error {
 		} else {
 			// AI's turn
 			bid = currentPlayer.MakeBid(g.Auction)
-			fmt.Printf("\n%s bids: %s\n", currentPlayer.Position, bid)
+			fmt.Printf("%s bids: %s\n", currentPlayer.Position, bid)
 		}
 
 		// Add bid to auction
@@ -111,8 +111,6 @@ func (g *Game) Start() error {
 		g.Auction.AddBid(bid)
 		g.Dealer = (g.Dealer + 1) % 4
 
-		// Add a newline for better readability
-		fmt.Println()
 	}
 
 	// Auction is complete

@@ -42,7 +42,7 @@ type Card struct {
 
 // String returns a string representation of the card
 func (c Card) String() string {
-	suitSymbols := []string{"♣", "♦", "♥", "♠"}
+	suitSymbols := []string{"C", "D", "H", "S"}
 	rankSymbols := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}
 	return fmt.Sprintf("%s%s", rankSymbols[c.Rank-2], suitSymbols[c.Suit])
 }
