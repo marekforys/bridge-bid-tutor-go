@@ -45,14 +45,17 @@ A console-based bridge bidding simulator that helps you practice and learn bridg
   - To double: Type `double`, `dbl`, or `x`.
   - To redouble: Type `redouble`, `rdbl`, or `xx`.
 
-## Bidding Conventions
+## Bidding System: Polish Club
 
-The AI uses a modern bidding system with the following conventions:
+The AI uses the **Polish Club** system, a sophisticated and powerful bidding system. Here are the core principles of its implementation:
 
-- **1NT Opening**: 15-17 HCP with a balanced hand.
-- **Rule of 20**: For other opening bids.
-- **Stayman**: A 2♣ bid over a 1NT opening to ask for a 4-card major.
-- **Jacoby Transfers**: A 2♦ or 2♥ bid over a 1NT opening to show a 5-card major suit.
+- **Artificial 1♣ Opening**: This is the cornerstone of the system. It shows one of two hand types:
+  - **Weak**: 11-14 HCP with a balanced or semi-balanced hand, without a 5-card major.
+  - **Strong**: 18+ HCP with any shape.
+- **1♦ Negative Response**: The primary response to a `1♣` opening is `1♦`, which is artificial and shows a weak hand (typically 0-6 HCP).
+- **5-Card Majors**: An opening bid of `1♥` or `1♠` guarantees a 5-card suit.
+- **1NT Opening**: Shows a balanced hand with 15-17 HCP.
+- **Conventions over 1NT**: The AI still uses **Stayman** and **Jacoby Transfers** in response to a `1NT` opening.
 
 ## End-of-Auction Review
 

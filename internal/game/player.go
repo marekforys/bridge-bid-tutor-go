@@ -1,6 +1,5 @@
 package game
 
-import "sort"
 
 // Position represents a player's position at the table
 type Position int
@@ -87,10 +86,27 @@ func (p *Player) MakeBid(auction *Auction) Bid {
 	return p.makeOpeningBid(auction, hcp, distribution)
 }
 
-// makeOpeningBid handles the logic for making an opening bid.
+// makeOpeningBid handles the logic for making an opening bid using Polish Club principles.
 func (p *Player) makeOpeningBid(auction *Auction, hcp int, distribution map[Suit]int) Bid {
-	// Check for a balanced hand and 15-17 HCP to open 1NT.
 	isBalanced := p.Hand.IsBalanced()
+
+	// --- Polish Club 1♣ Opening ---
+	// 1. Strong hand: 18+ HCP, any shape.
+	// 2. Weak balanced: 11-14 HCP, no 5-card major.
+	openOneClub := false
+	if hcp >= 18 {
+		openOneClub = true
+	} else if hcp >= 11 && hcp <= 14 && isBalanced && distribution[Hearts] < 5 && distribution[Spades] < 5 {
+		openOneClub = true
+	}
+	if openOneClub {
+		bid := NewBid(1, Clubs)
+		if auction.IsValidBid(bid) {
+			return bid
+		}
+	}
+
+	// --- 1NT Opening (15-17 HCP, balanced) ---
 	if isBalanced && hcp >= 15 && hcp <= 17 {
 		bid := NewBid(1, 4) // 4 represents NoTrump
 		if auction.IsValidBid(bid) {
@@ -98,24 +114,25 @@ func (p *Player) makeOpeningBid(auction *Auction, hcp int, distribution map[Suit
 		}
 	}
 
-	// Rule of 20 for other openings.
-	var suitLengths []int
-	for s := Clubs; s <= Spades; s++ {
-		suitLengths = append(suitLengths, distribution[s])
-	}
-	sort.Sort(sort.Reverse(sort.IntSlice(suitLengths)))
-	if hcp+suitLengths[0]+suitLengths[1] >= 20 {
-		// Find the longest suit to open.
-		// In case of a tie, we can add more sophisticated rules later.
-		longestSuit := Clubs
-		maxLength := 0
-		for s := Clubs; s <= Spades; s++ {
-			if distribution[s] > maxLength {
-				maxLength = distribution[s]
-				longestSuit = s
+	// --- Major Suit Openings (5+ cards, 11-17 HCP) ---
+	if hcp >= 11 && hcp <= 17 {
+		if distribution[Spades] >= 5 {
+			bid := NewBid(1, Spades)
+			if auction.IsValidBid(bid) {
+				return bid
 			}
 		}
-		bid := NewBid(1, longestSuit)
+		if distribution[Hearts] >= 5 {
+			bid := NewBid(1, Hearts)
+			if auction.IsValidBid(bid) {
+				return bid
+			}
+		}
+	}
+
+	// --- 1♦ Opening (Natural, 4+ cards, 11-17 HCP) ---
+	if hcp >= 11 && hcp <= 17 && distribution[Diamonds] >= 4 {
+		bid := NewBid(1, Diamonds)
 		if auction.IsValidBid(bid) {
 			return bid
 		}
@@ -124,8 +141,20 @@ func (p *Player) makeOpeningBid(auction *Auction, hcp int, distribution map[Suit
 	return NewPass()
 }
 
-// makeResponseBid handles the logic for responding to a partner's bid.
+// makeResponseBid handles the logic for responding to a partner's bid using Polish Club principles.
 func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, distribution map[Suit]int) Bid {
+	// --- Responses to 1♣ Opening ---
+	if partnerBid.Level == 1 && partnerBid.Strain == Clubs {
+		// Negative response: 0-6 HCP.
+		if hcp <= 6 {
+			bid := NewBid(1, Diamonds)
+			if auction.IsValidBid(bid) {
+				return bid
+			}
+		}
+		// More complex responses (e.g., showing a major) can be added here.
+	}
+
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
 		// Jacoby Transfers: Check for a 5-card major and 6+ HCP.
@@ -153,8 +182,7 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 		}
 	}
 
-	// --- Responses by 1NT Opener ---
-	// This is a simplified check. A full implementation would verify we opened 1NT.
+	// --- Responses by Opener (after partner's response) ---
 	// Response to Jacoby Transfer.
 	if partnerBid.Level == 2 && partnerBid.Strain == Diamonds { // Transfer to Hearts
 		return NewBid(2, Hearts)
@@ -174,7 +202,7 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 		return NewBid(2, Diamonds) // No 4-card major.
 	}
 
-	// Simple support logic (can be expanded).
+	// Simple support logic for suit openings.
 	if hcp >= 6 && hcp <= 9 && distribution[partnerBid.Strain] >= 3 {
 		bid := NewBid(partnerBid.Level+1, partnerBid.Strain)
 		if auction.IsValidBid(bid) {
