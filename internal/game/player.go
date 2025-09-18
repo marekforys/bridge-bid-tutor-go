@@ -198,71 +198,7 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 		}
 	}
 
-    // --- Responder continuations after 1♣ - 1♦ - (opener strong rebid) ---
-    // Partner just made a 2-level rebid; check if the prior sequence was 1C-1D.
-    if partnerBid.Level == 2 && (partnerBid.Strain == 4 || partnerBid.Strain == Clubs || partnerBid.Strain == Hearts || partnerBid.Strain == Diamonds) {
-        var myPrevBid, partnerPrevBid *Bid
-        for i := len(auction.Bids) - 1; i >= 0; i-- {
-            b := &auction.Bids[i]
-            if myPrevBid == nil && b.Position == p.Position {
-                myPrevBid = b
-                continue
-            }
-
-    
-
-    // (Responder follow-ups after Puppet answers handled in makeRebid where state is available)
-            if partnerPrevBid == nil && b.Position == p.Position.Partner() {
-                partnerPrevBid = b
-                if myPrevBid != nil && partnerPrevBid != nil {
-                    break
-                }
-            }
-        }
-        if myPrevBid != nil && partnerPrevBid != nil && partnerPrevBid.Level == 1 && partnerPrevBid.Strain == Clubs && myPrevBid.Level == 1 && myPrevBid.Strain == Diamonds {
-            switch partnerBid.Strain {
-            case 4: // 2NT: strong balanced 18-19
-                if hcp >= 6 {
-                    bid := NewBid(3, 4) // 3NT
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                return NewPass()
-            case Clubs: // 2C: strong with clubs
-                if distribution[Hearts] >= 4 {
-                    bid := NewBid(2, Hearts)
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                if distribution[Spades] >= 4 {
-                    bid := NewBid(2, Spades)
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                bid := NewBid(2, Diamonds) // waiting/negative relay
-                if auction.IsValidBid(bid) { return bid }
-            case Hearts: // 2H: strong with hearts
-                if distribution[Hearts] >= 3 {
-                    bid := NewBid(3, Hearts)
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                if hcp >= 6 {
-                    bid := NewBid(2, 4) // 2NT waiting
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                return NewPass()
-            case Diamonds: // 2D: strong with diamonds
-                if distribution[Diamonds] >= 3 && hcp >= 6 {
-                    bid := NewBid(3, Diamonds)
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                if hcp >= 6 {
-                    bid := NewBid(2, 4) // 2NT
-                    if auction.IsValidBid(bid) { return bid }
-                }
-                return NewPass()
-            }
-        }
-    }
-
-    // (Opener responses over 2NT moved into makeRebid where myLastBid/partnerLastBid are in scope)
+    // (Opener and responder continuations over strong rebids are handled in makeRebid.)
 
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
@@ -366,6 +302,58 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
             return NewPass()
         }
     }
+
+    // Responder follow-ups after Puppet answers over 2NT
+    // Sequence: 1C (partner) - 1D (us) - 2NT (partner) - 3C (us, Puppet) - 3H/3S/3D (partner) - ? (us)
+    if myLastBid.Level == 3 && myLastBid.Strain == Clubs && partnerLastBid.Level == 3 {
+        switch partnerLastBid.Strain {
+        case Hearts:
+            if distribution[Hearts] >= 3 {
+                if hcp >= 13 {
+                    bid := NewBid(6, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 8 {
+                    bid := NewBid(4, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                bid := NewBid(3, 4)
+                if auction.IsValidBid(bid) { return bid }
+                return NewPass()
+            }
+            if hcp >= 8 {
+                bid := NewBid(3, 4)
+                if auction.IsValidBid(bid) { return bid }
+            }
+            return NewPass()
+        case Spades:
+            if distribution[Spades] >= 3 {
+                if hcp >= 13 {
+                    bid := NewBid(6, Spades)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 8 {
+                    bid := NewBid(4, Spades)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                bid := NewBid(3, 4)
+                if auction.IsValidBid(bid) { return bid }
+                return NewPass()
+            }
+            if hcp >= 8 {
+                bid := NewBid(3, 4)
+                if auction.IsValidBid(bid) { return bid }
+            }
+            return NewPass()
+        case Diamonds:
+            if hcp >= 8 {
+                bid := NewBid(3, 4)
+                if auction.IsValidBid(bid) { return bid }
+            }
+            return NewPass()
+        }
+    }
+ 
     // Responder's second turn after 1C - 1D - (opener strong rebid)
     // If we (current player) previously bid 1D and partner just made a 2-level rebid,
     // provide continuations per our simple scheme.
