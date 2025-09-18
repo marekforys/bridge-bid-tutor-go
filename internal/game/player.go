@@ -321,6 +321,47 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 
 // makeRebid handles the logic for making a rebid after our partner has responded.
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
+    // Opener's replies over 2NT to responder's slam tools
+    if myLastBid.Level == 2 && myLastBid.Strain == 4 {
+        // Respond to Puppet Stayman (3C): show a 5-card major; else 3D = no 5M
+        if partnerLastBid.Level == 3 && partnerLastBid.Strain == Clubs {
+            if distribution[Hearts] >= 5 {
+                bid := NewBid(3, Hearts)
+                if auction.IsValidBid(bid) { return bid }
+            }
+            if distribution[Spades] >= 5 {
+                bid := NewBid(3, Spades)
+                if auction.IsValidBid(bid) { return bid }
+            }
+            bid := NewBid(3, Diamonds) // deny a 5-card major
+            if auction.IsValidBid(bid) { return bid }
+            return NewPass()
+        }
+        // Respond to Gerber (4C): 4D=0/4 aces, 4H=1, 4S=2, 4NT=3
+        if partnerLastBid.Level == 4 && partnerLastBid.Strain == Clubs {
+            aces := 0
+            for _, c := range p.Hand.Cards {
+                if c.Rank == Ace {
+                    aces++
+                }
+            }
+            switch aces {
+            case 0, 4:
+                bid := NewBid(4, Diamonds)
+                if auction.IsValidBid(bid) { return bid }
+            case 1:
+                bid := NewBid(4, Hearts)
+                if auction.IsValidBid(bid) { return bid }
+            case 2:
+                bid := NewBid(4, Spades)
+                if auction.IsValidBid(bid) { return bid }
+            case 3:
+                bid := NewBid(4, 4) // 4NT
+                if auction.IsValidBid(bid) { return bid }
+            }
+            return NewPass()
+        }
+    }
     // Responder's second turn after 1C - 1D - (opener strong rebid)
     // If we (current player) previously bid 1D and partner just made a 2-level rebid,
     // provide continuations per our simple scheme.
