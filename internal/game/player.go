@@ -25,8 +25,8 @@ func (p Position) String() string {
 	default:
 		return "Unknown"
 	}
-}
 
+}
 // Player represents a bridge player
 type Player struct {
 	Position Position
@@ -198,6 +198,65 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 		}
 	}
 
+    // --- Responder continuations after 1♣ - 1♦ - (opener strong rebid) ---
+    // Partner just made a 2-level rebid; check if the prior sequence was 1C-1D.
+    if partnerBid.Level == 2 && (partnerBid.Strain == 4 || partnerBid.Strain == Clubs || partnerBid.Strain == Hearts || partnerBid.Strain == Diamonds) {
+        var myPrevBid, partnerPrevBid *Bid
+        for i := len(auction.Bids) - 1; i >= 0; i-- {
+            b := &auction.Bids[i]
+            if myPrevBid == nil && b.Position == p.Position {
+                myPrevBid = b
+                continue
+            }
+            if partnerPrevBid == nil && b.Position == p.Position.Partner() {
+                partnerPrevBid = b
+                if myPrevBid != nil && partnerPrevBid != nil {
+                    break
+                }
+            }
+        }
+        if myPrevBid != nil && partnerPrevBid != nil && partnerPrevBid.Level == 1 && partnerPrevBid.Strain == Clubs && myPrevBid.Level == 1 && myPrevBid.Strain == Diamonds {
+            switch partnerBid.Strain {
+            case 4: // 2NT: strong balanced 18-19
+                if hcp >= 6 {
+                    bid := NewBid(3, 4) // 3NT
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                return NewPass()
+            case Clubs: // 2C: strong with clubs
+                if distribution[Hearts] >= 4 {
+                    bid := NewBid(2, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if distribution[Spades] >= 4 {
+                    bid := NewBid(2, Spades)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                bid := NewBid(2, Diamonds) // waiting/negative relay
+                if auction.IsValidBid(bid) { return bid }
+            case Hearts: // 2H: strong with hearts
+                if distribution[Hearts] >= 3 {
+                    bid := NewBid(3, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 6 {
+                    bid := NewBid(2, 4) // 2NT waiting
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                return NewPass()
+            case Diamonds: // 2D: strong with diamonds
+                if distribution[Diamonds] >= 3 && hcp >= 6 {
+                    bid := NewBid(3, Diamonds)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 6 {
+                    bid := NewBid(2, 4) // 2NT
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                return NewPass()
+            }
+        }
+    }
 
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
@@ -260,6 +319,64 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 
 // makeRebid handles the logic for making a rebid after our partner has responded.
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
+    // Responder's second turn after 1C - 1D - (opener strong rebid)
+    // If we (current player) previously bid 1D and partner just made a 2-level rebid,
+    // provide continuations per our simple scheme.
+    if myLastBid.Level == 1 && myLastBid.Strain == Diamonds && partnerLastBid.Level == 2 {
+        // Confirm the auction started with partner opening 1C.
+        openedOneClub := false
+        for i := 0; i < len(auction.Bids); i++ {
+            b := auction.Bids[i]
+            if b.Position == p.Position.Partner() && b.Level == 1 && b.Strain == Clubs {
+                openedOneClub = true
+                break
+            }
+        }
+        if openedOneClub {
+            switch partnerLastBid.Strain {
+            case 4: // 2NT: strong balanced 18-19
+                if hcp >= 8 {
+                    bid := NewBid(3, 4) // 3NT
+                    if auction.IsValidBid(bid) {
+                        return bid
+                    }
+                }
+                return NewPass()
+            case Clubs: // 2C: strong with clubs
+                if distribution[Hearts] >= 4 {
+                    bid := NewBid(2, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if distribution[Spades] >= 4 {
+                    bid := NewBid(2, Spades)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                bid := NewBid(2, Diamonds) // waiting/negative relay
+                if auction.IsValidBid(bid) { return bid }
+                return NewPass()
+            case Hearts: // 2H: strong with hearts
+                if distribution[Hearts] >= 3 {
+                    bid := NewBid(3, Hearts)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 6 {
+                    bid := NewBid(2, 4) // 2NT waiting
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                return NewPass()
+            case Diamonds: // 2D: strong with diamonds
+                if distribution[Diamonds] >= 3 && hcp >= 6 {
+                    bid := NewBid(3, Diamonds)
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 6 {
+                    bid := NewBid(2, 4) // 2NT
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                return NewPass()
+            }
+        }
+    }
 	// --- Opener's Rebid after 1♣ - 1♦ ---
 	if myLastBid.Level == 1 && myLastBid.Strain == Clubs && partnerLastBid.Level == 1 && partnerLastBid.Strain == Diamonds {
 		// We opened 1♣ and partner responded with a negative 1♦.
