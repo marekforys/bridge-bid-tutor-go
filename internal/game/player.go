@@ -258,6 +258,8 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
         }
     }
 
+    // (Opener responses over 2NT moved into makeRebid where myLastBid/partnerLastBid are in scope)
+
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
 		// Jacoby Transfers: Check for a 5-card major and 6+ HCP.
@@ -335,6 +337,16 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
         if openedOneClub {
             switch partnerLastBid.Strain {
             case 4: // 2NT: strong balanced 18-19
+                // Slam tools over 2NT
+                // Prefer Puppet Stayman with a 5-card major; else with 12+ use Gerber 4C; else 3NT
+                if distribution[Hearts] >= 5 || distribution[Spades] >= 5 {
+                    bid := NewBid(3, Clubs) // 3C Puppet Stayman over 2NT
+                    if auction.IsValidBid(bid) { return bid }
+                }
+                if hcp >= 12 {
+                    bid := NewBid(4, Clubs) // 4C Gerber asking for aces
+                    if auction.IsValidBid(bid) { return bid }
+                }
                 if hcp >= 8 {
                     bid := NewBid(3, 4) // 3NT
                     if auction.IsValidBid(bid) {
