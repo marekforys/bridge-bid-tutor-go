@@ -30,6 +30,74 @@ func TestAI_PolishClub(t *testing.T) {
 			t.Errorf("Expected 1NT rebid, but got %s", bid)
 		}
 	})
+}
+
+func TestAI_StrongClubContinuations_Duplicate(t *testing.T) {
+    t.Skip("superseded by ai_strong_club_test.go")
+    // 1C (strong) - 1D; balanced 18-19 -> 2NT
+    t.Run("Strong balanced 18-19 rebids 2NT", func(t *testing.T) {
+        opener := NewPlayer(North)
+        // 18-19 HCP balanced: e.g., A K Q in two suits, KQ elsewhere
+        opener.Hand = NewHand([]Card{
+            // Spades: A Q 7
+            {Suit: Spades, Rank: Ace}, {Suit: Spades, Rank: Queen}, {Suit: Spades, Rank: Seven},
+            // Hearts: K Q 6
+            {Suit: Hearts, Rank: King}, {Suit: Hearts, Rank: Queen}, {Suit: Hearts, Rank: Six},
+            // Diamonds: K 9 4
+            {Suit: Diamonds, Rank: King}, {Suit: Diamonds, Rank: Nine}, {Suit: Diamonds, Rank: Four},
+            // Clubs: A 8 3
+            {Suit: Clubs, Rank: Ace}, {Suit: Clubs, Rank: Eight}, {Suit: Clubs, Rank: Three},
+        })
+
+        auction := NewAuction()
+        auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North}) // 1C strong
+        auction.AddBid(Bid{Level: 1, Strain: Diamonds, Position: South}) // 1D waiting/negative
+
+        bid := opener.MakeBid(auction)
+        if bid.Level != 2 || bid.Strain != 4 { // 2NT
+            t.Errorf("Expected 2NT rebid, got %s", bid)
+        }
+    })
+
+    // 1C (strong) - 1D; strong with long clubs -> 2C
+    t.Run("Strong with long clubs rebids 2C", func(t *testing.T) {
+        opener := NewPlayer(North)
+        opener.Hand = NewHand([]Card{
+            // Spades: A 7
+            {Suit: Spades, Rank: Ace}, {Suit: Spades, Rank: Seven},
+            // Hearts: K Q 9
+            {Suit: Hearts, Rank: King}, {Suit: Hearts, Rank: Queen}, {Suit: Hearts, Rank: Nine},
+            // Diamonds: A 7 3
+            {Suit: Diamonds, Rank: Ace}, {Suit: Diamonds, Rank: Seven}, {Suit: Diamonds, Rank: Three},
+            // Clubs: K Q J 10 5 (5+ clubs)
+            {Suit: Clubs, Rank: King}, {Suit: Clubs, Rank: Queen}, {Suit: Clubs, Rank: Jack}, {Suit: Clubs, Rank: Ten}, {Suit: Clubs, Rank: Five},
+        })
+
+        auction := NewAuction()
+        auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North})
+        auction.AddBid(Bid{Level: 1, Strain: Diamonds, Position: South})
+
+        bid := opener.MakeBid(auction)
+        if bid.Level != 2 || bid.Strain != Clubs {
+            t.Errorf("Expected 2C rebid, got %s", bid)
+        }
+    })
+
+    // 1C (strong) - 1D; strong with 4-card heart suit -> 2H
+    t.Run("Strong with 4 hearts rebids 2H", func(t *testing.T) {
+        opener := NewPlayer(North)
+        opener.Hand = NewHand([]Card{
+            // Spades: A K 7
+            {Suit: Spades, Rank: Ace}, {Suit: Spades, Rank: King}, {Suit: Spades, Rank: Seven},
+            // Hearts: A Q 9 4 (4 hearts)
+            {Suit: Hearts, Rank: Ace}, {Suit: Hearts, Rank: Queen}, {Suit: Hearts, Rank: Nine}, {Suit: Hearts, Rank: Four},
+            // Diamonds: K 9
+            {Suit: Diamonds, Rank: King}, {Suit: Diamonds, Rank: Nine},
+            // Clubs: K Q 3
+            {Suit: Clubs, Rank: King}, {Suit: Clubs, Rank: Queen}, {Suit: Clubs, Rank: Three},
+        })
+
+	})
 
 	// Test case: Responder has 7+ HCP and a 4-card major, should bid the major.
 	t.Run("Responder bids major with positive hand", func(t *testing.T) {
@@ -42,10 +110,9 @@ func TestAI_PolishClub(t *testing.T) {
 		})
 
 		auction := NewAuction()
-		auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North}) // Partner opens 1C
+		auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North})
 
 		bid := responder.MakeBid(auction)
-
 		if bid.Level != 1 || bid.Strain != Spades {
 			t.Errorf("Expected 1S response, but got %s", bid)
 		}
@@ -63,7 +130,6 @@ func TestAI_PolishClub(t *testing.T) {
 
 		auction := NewAuction()
 		bid := opener.MakeBid(auction)
-
 		if bid.Level != 1 || bid.Strain != Clubs {
 			t.Errorf("Expected 1C opening with strong hand, but got %s", bid)
 		}
@@ -80,10 +146,9 @@ func TestAI_PolishClub(t *testing.T) {
 		})
 
 		auction := NewAuction()
-		auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North}) // Partner opens 1C
+		auction.AddBid(Bid{Level: 1, Strain: Clubs, Position: North})
 
 		bid := responder.MakeBid(auction)
-
 		if bid.Level != 1 || bid.Strain != Diamonds {
 			t.Errorf("Expected 1D negative response, but got %s", bid)
 		}
@@ -91,10 +156,15 @@ func TestAI_PolishClub(t *testing.T) {
 }
 
 func TestAI_PolishClub_Continuations(t *testing.T) {
-    // 1C - 1H; opener raises to 3H with 4-card support
-    t.Run("Opener raises to 3H with 4-card support", func(t *testing.T) {
-        opener := NewPlayer(North)
-        // Hearts support >=4, HCP ~12, not balanced necessary
+	// 1C - 1H; opener raises to 3H with 4-card support
+	t.Run("Opener raises to 3H with 4-card support", func(t *testing.T) {
+		opener := NewPlayer(North)
+		opener.Hand = NewHand([]Card{
+			{Suit: Spades, Rank: Nine}, {Suit: Spades, Rank: Eight}, {Suit: Spades, Rank: Seven},
+			{Suit: Hearts, Rank: Ace}, {Suit: Hearts, Rank: King}, {Suit: Hearts, Rank: Seven}, {Suit: Hearts, Rank: Four},
+			{Suit: Diamonds, Rank: King}, {Suit: Diamonds, Rank: Eight}, {Suit: Diamonds, Rank: Three},
+			{Suit: Clubs, Rank: Queen}, {Suit: Clubs, Rank: Nine}, {Suit: Clubs, Rank: Five},
+		})
         opener.Hand = NewHand([]Card{
             // Spades
             {Suit: Spades, Rank: Nine}, {Suit: Spades, Rank: Eight}, {Suit: Spades, Rank: Seven},

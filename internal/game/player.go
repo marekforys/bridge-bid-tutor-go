@@ -271,7 +271,23 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
 			}
 			// Add logic for other weak, unbalanced hand types here.
 		}
-		// Add logic for strong hand (18+ HCP) rebids here.
+		// Strong hand (18+ HCP) rebids.
+		if hcp >= 18 {
+			// Balanced 18-19 -> 2NT
+			if p.Hand.IsBalanced() && hcp <= 19 {
+				return NewBid(2, 4)
+			}
+			// Unbalanced strong hands
+			if distribution[Clubs] >= 5 {
+				return NewBid(2, Clubs)
+			}
+			if distribution[Hearts] >= 4 {
+				return NewBid(2, Hearts)
+			}
+			if distribution[Diamonds] >= 4 {
+				return NewBid(2, Diamonds)
+			}
+		}
 	}
 
 	// --- Opener's continuations after 1♣ - 1M (positive) ---
