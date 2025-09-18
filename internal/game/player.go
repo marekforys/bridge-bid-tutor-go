@@ -208,6 +208,10 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
                 myPrevBid = b
                 continue
             }
+
+    
+
+    // (Responder follow-ups after Puppet answers handled in makeRebid where state is available)
             if partnerPrevBid == nil && b.Position == p.Position.Partner() {
                 partnerPrevBid = b
                 if myPrevBid != nil && partnerPrevBid != nil {
