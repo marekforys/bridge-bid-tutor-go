@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bridge Bid Tutor - Web Client</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+    header { padding: 16px 24px; background: #111827; border-bottom: 1px solid #334155; }
+    main { padding: 24px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+    h1 { font-size: 18px; margin: 0; }
+    .card { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+    button.secondary { background: #334155; color: #e2e8f0; }
+    input, select { background: #0b1220; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #1f2937; font-size: 14px; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #1f2937; font-size: 12px; }
+    .status { font-size: 12px; color: #9ca3af; }
+    .grid-1 { grid-column: span 2; }
+    code { background: #0b1220; padding: 2px 4px; border-radius: 6px; border: 1px solid #1f2937; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bridge Bid Tutor - Web Client</h1>
+  </header>
+  <main>
+    <section class="card grid-1">
+      <div class="row">
+        <button id="newSessionBtn">New Session</button>
+        <span class="status">Session ID:</span>
+        <code id="sessionId">-</code>
+        <span class="status">Dealer:</span>
+        <span id="dealer" class="pill">-</span>
+        <span class="status">Auction complete:</span>
+        <span id="complete" class="pill">-</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">Players</h3>
+      <div id="players"></div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">Auction</h3>
+      <table>
+        <thead>
+          <tr><th>Pos</th><th>Bid</th></tr>
+        </thead>
+        <tbody id="auction"></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <label for="position">Position</label>
+        <select id="position">
+          <option>North</option>
+          <option>East</option>
+          <option>South</option>
+          <option>West</option>
+        </select>
+        <label for="bid">Bid</label>
+        <input id="bid" placeholder="e.g. 1C, 2NT, Pass, X, XX" />
+        <button id="sendBidBtn">Send Bid</button>
+        <button id="refreshBtn" class="secondary">Refresh</button>
+      </div>
+      <div class="status" id="message" style="margin-top:8px"></div>
+    </section>
+
+    <section class="card grid-1">
+      <h3 style="margin-top:0">How to use</h3>
+      <ol>
+        <li>Click <b>New Session</b> to deal and start a new auction.</li>
+        <li>Use the form to submit bids for the current dealer. You can enter: <code>1C</code>, <code>1H</code>, <code>1S</code>, <code>1NT</code>, <code>Pass</code>, <code>X</code>, <code>XX</code>.</li>
+        <li>Click <b>Refresh</b> to re-fetch state.</li>
+      </ol>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
