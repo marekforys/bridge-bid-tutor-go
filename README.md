@@ -188,13 +188,13 @@ West (HCP: 13)
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI[Web Client (HTML/JS)]
+    UI[Web Client]
   end
 
   subgraph Server
-    API[REST API<br/>/api/sessions<br/>/api/sessions/{id}<br/>/api/sessions/{id}/bid]
-    STORE[(In-memory<br/>Session Store)]
-    ENGINE[[Game Engine<br/>internal/game]]
+    API[REST API]
+    STORE[(In-memory Session Store)]
+    ENGINE[[Game Engine internal/game]]
   end
 
   UI -- HTTP(S) --> API
@@ -202,31 +202,36 @@ flowchart LR
   API <--> ENGINE
 ```
 
+Endpoints served by REST API:
+- /api/sessions (POST)
+- /api/sessions/:id (GET)
+- /api/sessions/:id/bid (POST)
+
 ### Typical Flow
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant W as Web Client (Browser)
-  participant A as REST API (/api)
-  participant S as Session Store
-  participant G as Game Engine (internal/game)
+  participant W as WebClient
+  participant A as RESTAPI
+  participant S as SessionStore
+  participant G as GameEngine
 
   W->>A: POST /api/sessions
-  A->>G: New deck, deal hands, NewAuction()
+  A->>G: New deck, deal hands, NewAuction
   A->>S: Save session (id, players, auction, dealer)
-  A-->>W: 201 { id, dealer, players, auction, complete }
+  A-->>W: 201 (id, dealer, players, auction, complete)
 
-  W->>A: POST /api/sessions/{id}/bid { position, bid }
+  W->>A: POST /api/sessions/:id/bid (position, bid)
   A->>S: Load session by id
-  A->>G: Validate & apply bid (Auction.IsValidBid, AddBid)
+  A->>G: Validate and apply bid
   G-->>A: Updated auction
   A->>S: Persist session state
-  A-->>W: 200 { updated state }
+  A-->>W: 200 (updated state)
 
-  W->>A: GET /api/sessions/{id}
+  W->>A: GET /api/sessions/:id
   A->>S: Load session
-  A-->>W: 200 { current state }
+  A-->>W: 200 (current state)
 ```
 
 ## License
