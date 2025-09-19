@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
-	"github.com/yourusername/bridge-bid-tutor-go/internal/game"
+	"github.com/marekforys/bridge-bid-tutor-go/internal/game"
 )
 
 func main() {

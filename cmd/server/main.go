@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/yourusername/bridge-bid-tutor-go/internal/server"
+	"github.com/marekforys/bridge-bid-tutor-go/internal/server"
 )
 
 // Minimal Swagger UI HTML using CDN, pointing to /docs/openapi.yaml

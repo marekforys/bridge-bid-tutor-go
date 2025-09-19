@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	gamepkg "github.com/yourusername/bridge-bid-tutor-go/internal/game"
+	gamepkg "github.com/marekforys/bridge-bid-tutor-go/internal/game"
 	"github.com/google/uuid"
 )
 
