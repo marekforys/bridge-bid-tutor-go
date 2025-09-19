@@ -23,6 +23,7 @@ const API = {
 const el = (id) => document.getElementById(id);
 
 function render(state) {
+  if (!state) return;
   el('sessionId').textContent = state.id;
   el('dealer').textContent = state.dealer;
   el('complete').textContent = String(state.complete);
@@ -35,6 +36,19 @@ function render(state) {
   if (el('position')) {
     el('position').value = current;
   }
+
+  // Update compact bid history
+  const lastBids = { N: '-', E: '-', S: '-', W: '-' };
+  state.auction.forEach(bid => {
+    lastBids[bid.position.charAt(0)] = bid.pass ? 'Pass' : 
+      (bid.redouble ? 'XX' : (bid.double ? 'X' : `${bid.level}${bid.strain}`));
+  });
+  
+  // Update the bid history display
+  Object.entries(lastBids).forEach(([pos, bid]) => {
+    const el = document.getElementById(`bid-${pos}`);
+    if (el) el.textContent = bid;
+  });
 
   const players = state.players.map(p => {
     const isDealer = p.position === state.dealer;
@@ -50,10 +64,12 @@ function render(state) {
   }).join('');
   el('players').innerHTML = players;
 
-  const rows = state.auction.map(a => `<tr><td>${a.position}</td><td>${
-    a.pass ? 'Pass' : (a.redouble ? 'XX' : (a.double ? 'X' : `${a.level}${a.strain}`))
-  }</td></tr>`).join('');
-  el('auction').innerHTML = rows || '<tr><td colspan="2">No bids yet</td></tr>';
+  const tbody = el('auction').querySelector('tbody');
+  tbody.innerHTML = state.auction.length > 0 
+    ? state.auction.map(a => `<tr><td>${a.position}</td><td>${
+        a.pass ? 'Pass' : (a.redouble ? 'XX' : (a.double ? 'X' : `${a.level}${a.strain}`))
+      }</td></tr>`).join('')
+    : '<tr><td colspan="2">No bids yet</td></tr>';
 
   // Update bid button enabled/disabled state
   updateBidAvailability(state);

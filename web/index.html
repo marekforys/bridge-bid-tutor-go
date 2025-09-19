@@ -56,14 +56,23 @@
       <h3 style="margin-top:0">Players</h3>
       <div id="players"></div>
     </section>
-
     <section class="card">
       <h3 style="margin-top:0">Auction</h3>
-      <table>
+      <div id="bidHistory" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #0b1220; border-radius: 8px; padding: 8px; margin-bottom: 12px; text-align: center; font-size: 12px;">
+        <div style="font-weight: 500;">North</div>
+        <div style="font-weight: 500;">East</div>
+        <div style="font-weight: 500;">South</div>
+        <div style="font-weight: 500;">West</div>
+        <div id="bid-N">-</div>
+        <div id="bid-E">-</div>
+        <div id="bid-S">-</div>
+        <div id="bid-W">-</div>
+      </div>
+      <table id="auction">
         <thead>
-          <tr><th>Pos</th><th>Bid</th></tr>
+          <tr><th>Position</th><th>Bid</th></tr>
         </thead>
-        <tbody id="auction"></tbody>
+        <tbody></tbody>
       </table>
       <div class="row" style="margin-top:10px">
         <label for="position">Position</label>
