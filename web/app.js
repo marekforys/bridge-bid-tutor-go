@@ -139,9 +139,30 @@ async function main() {
     }
   });
 
-  // Recompute availability when user changes position or bid input
+  // Recompute availability and update input validation when user types
   el('position').addEventListener('change', () => updateBidAvailability(lastState));
-  el('bid').addEventListener('input', () => updateBidAvailability(lastState));
+  
+  const bidInput = el('bid');
+  bidInput.addEventListener('input', () => {
+    const bid = bidInput.value.trim();
+    updateBidAvailability(lastState);
+    
+    // Update input validation classes in real-time
+    if (bid.length === 0) {
+      bidInput.classList.remove('valid', 'invalid');
+    } else {
+      const isValid = isValidBidFormat(bid);
+      bidInput.classList.toggle('valid', isValid);
+      bidInput.classList.toggle('invalid', !isValid);
+    }
+  });
+  
+  // Clear validation state when input loses focus if empty
+  bidInput.addEventListener('blur', () => {
+    if (bidInput.value.trim() === '') {
+      bidInput.classList.remove('valid', 'invalid');
+    }
+  });
 }
 
 window.addEventListener('DOMContentLoaded', main);
