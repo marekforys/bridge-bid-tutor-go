@@ -1,4 +1,4 @@
-module github.com/yourusername/bridge-bid-tutor-go
+module github.com/marekforys/bridge-bid-tutor-go
 
 go 1.21
 

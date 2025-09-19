@@ -1,0 +1,89 @@
+run:
+  timeout: 5m
+  tests: true
+  skip-dirs:
+    - .git
+    - vendor
+    - web
+
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - execinquery
+    - exhaustive
+    - exportloopref
+    - gci
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - makezero
+    - misspell
+    - musttag
+    - nakedret
+    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/marekforys/bridge-bid-tutor-go)
+  goimports:
+    local-prefixes: github.com/marekforys/bridge-bid-tutor-go
+  gomodguard:
+    allowed:
+      modules:
+        - gopkg.in/yaml.v3
+
+issues:
+  exclude-rules:
+    # Don't require documentation for tests and mocks
+    - path: _test\.go$
+      linters:
+        - godox
+        - godot
+    - path: mocks/.*\.go$
+      linters:
+        - godox
+        - godot
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -14,6 +14,8 @@ A bridge bidding tutor with both a console-based simulator and a REST server wit
 ## Prerequisites
 
 - Go 1.21 or higher
+- Make (for development tasks)
+- golangci-lint (for code linting, installed via `make deps`)
 
 ## Installation
 
@@ -26,7 +28,65 @@ A bridge bidding tutor with both a console-based simulator and a REST server wit
 2. Install dependencies:
    ```bash
    go mod tidy
+   make deps
    ```
+
+## Project Structure
+
+```
+.
+├── cmd/                  # Main applications
+│   ├── bridge/          # CLI application
+│   └── server/          # HTTP server
+├── internal/            # Private application code
+│   ├── game/            # Core game logic
+│   └── server/          # HTTP server implementation
+├── web/                 # Web client files
+├── .gitignore           # Git ignore file
+├── .golangci.yml        # Linter configuration
+├── CONTRIBUTING.md      # Contribution guidelines
+├── go.mod              # Go module definition
+├── go.sum              # Go module checksums
+└── Makefile            # Development tasks
+```
+
+## Development
+
+### Building
+
+```bash
+make build
+```
+
+### Running Tests
+
+Run all tests:
+```bash
+make test
+```
+
+Run tests with coverage:
+```bash
+make test-cover
+```
+
+### Linting
+
+Run linters:
+```bash
+make lint
+```
+
+Fix linting issues:
+```bash
+make lint-fix
+```
+
+### Running the Server
+
+```bash
+make run
+```
 
 ## Usage
 
