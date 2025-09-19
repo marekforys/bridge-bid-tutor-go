@@ -20,6 +20,17 @@
     .status { font-size: 12px; color: #9ca3af; }
     .grid-1 { grid-column: span 2; }
     code { background: #0b1220; padding: 2px 4px; border-radius: 6px; border: 1px solid #1f2937; }
+    .player { padding: 8px 10px; border-radius: 10px; }
+    .player.dealer { border: 1px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.25) inset; }
+    .badge { display: inline-block; margin-left: 8px; padding: 2px 6px; border-radius: 9999px; background: #2563eb; color: white; font-size: 11px; }
+    /* Input validation visuals */
+    input.valid { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.25); }
+    input.invalid { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.25); }
+    /* Tooltip */
+    .help { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #e2e8f0; font-weight: 700; cursor: default; }
+    .tooltip { position: relative; display: inline-block; margin-left: 6px; }
+    .tooltip .tip { visibility: hidden; opacity: 0; position: absolute; z-index: 10; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0b1220; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; width: 260px; transition: opacity 0.15s ease; font-size: 12px; }
+    .tooltip:hover .tip { visibility: visible; opacity: 1; }
   </style>
 </head>
 <body>
@@ -64,9 +75,13 @@
         </select>
         <label for="bid">Bid</label>
         <input id="bid" placeholder="e.g. 1C, 2NT, Pass, X, XX" />
+        <span class="tooltip"><span class="help" title="Bid formats">?</span>
+          <span class="tip">Valid formats: 1-7 + C/D/H/S/NT (e.g., 1C, 2NT) or Pass, X, XX. Examples: 1H, 3S, 4NT, Pass.</span>
+        </span>
         <button id="sendBidBtn" disabled>Send Bid</button>
         <button id="refreshBtn" class="secondary">Refresh</button>
       </div>
+      <div class="status" style="margin-top:6px">Valid formats: 1-7 + C/D/H/S/NT (e.g., 1C, 2NT) or Pass, X, XX</div>
       <div class="status" id="message" style="margin-top:8px"></div>
     </section>
 

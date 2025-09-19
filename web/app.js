@@ -37,8 +37,11 @@ function render(state) {
   }
 
   const players = state.players.map(p => {
-    return `<div style="margin-bottom:8px">
-      <div><b>${p.position}</b> — HCP: ${p.hcp}</div>
+    const isDealer = p.position === state.dealer;
+    const cls = `player${isDealer ? ' dealer' : ''}`;
+    const badge = isDealer ? '<span class="badge">Current</span>' : '';
+    return `<div class="${cls}" style="margin-bottom:8px">
+      <div><b>${p.position}</b> — HCP: ${p.hcp} ${badge}</div>
       <div>♠ ${p.spades}</div>
       <div>♥ ${p.hearts}</div>
       <div>♦ ${p.diamonds}</div>
@@ -91,17 +94,30 @@ async function main() {
       return;
     }
     const position = el('position').value;
-    const bid = el('bid').value.trim();
+    let bid = el('bid').value.trim();
     if (!bid) {
       el('message').textContent = 'Enter a bid';
       return;
     }
+    if (!isValidBidFormat(bid)) {
+      el('message').textContent = 'Invalid bid format. Use 1-7 + C/D/H/S/NT (e.g., 1C, 2NT) or Pass, X, XX';
+      return;
+    }
+    // Normalize: uppercase and map single trailing N to NT
+    bid = normalizeBid(bid);
     try {
       const state = await API.postBid(sessionId, position, bid);
       lastState = state;
       render(state);
+      // Auto-advance position to next dealer (server returns updated dealer)
+      if (el('position')) {
+        el('position').value = state.dealer;
+      }
+      // Clear and focus bid input for next entry
       el('bid').value = '';
+      el('bid').focus();
       el('message').textContent = 'Bid accepted';
+      updateBidAvailability(state);
     } catch (e) {
       el('message').textContent = e.message;
     }
@@ -122,14 +138,49 @@ function updateBidAvailability(state) {
   const dealer = state.dealer;
   const complete = !!state.complete;
   const bidValue = (el('bid').value || '').trim();
-  const can = !complete && pos === dealer && bidValue.length > 0;
+  const validFormat = bidValue.length > 0 && isValidBidFormat(bidValue);
+  const can = !complete && pos === dealer && validFormat;
   btn.disabled = !can;
   const msg = el('message');
   if (complete) {
     msg.textContent = 'Auction is complete';
   } else if (pos !== dealer) {
     msg.textContent = `It is ${dealer}'s turn to bid`;
+  } else if (bidValue && !validFormat) {
+    msg.textContent = 'Invalid bid format. Use 1-7 + C/D/H/S/NT (e.g., 1C, 2NT) or Pass, X, XX';
   } else {
     // keep current message if any
   }
+}
+
+// Client-side validation: accepts contract bids (1-7 + C/D/H/S/NT/N) and special tokens Pass/P, Double/DBL/X, Redouble/RDBL/XX
+function isValidBidFormat(input) {
+  const s = (input || '').trim().toLowerCase();
+  if (!s) return false;
+  // special tokens
+  if (s === 'pass' || s === 'p' || s === 'double' || s === 'dbl' || s === 'x' || s === 'redouble' || s === 'rdbl' || s === 'xx') {
+    return true;
+  }
+  // contract like 1c, 2nt, 3h, 4s
+  const m = s.match(/^([1-7])(c|d|h|s|nt|n)$/i);
+  return !!m;
+}
+
+function normalizeBid(input) {
+  let s = (input || '').trim().toUpperCase();
+  if (!s) return s;
+  // Special tokens normalization
+  if (s === 'P') return 'Pass';
+  if (s === 'X' || s === 'DBL') return 'X';
+  if (s === 'XX' || s === 'RDBL') return 'XX';
+  if (s === 'PASS' || s === 'DOUBLE' || s === 'REDOUBLE') return s.charAt(0) + s.slice(1).toLowerCase();
+  // Map 1N -> 1NT, etc.
+  const m = s.match(/^([1-7])(C|D|H|S|N|NT)$/);
+  if (m) {
+    const lvl = m[1];
+    let strain = m[2];
+    if (strain === 'N') strain = 'NT';
+    return `${lvl}${strain}`;
+  }
+  return s;
 }
