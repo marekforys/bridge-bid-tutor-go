@@ -192,9 +192,9 @@ flowchart LR
   end
 
   subgraph Server
-    API[/REST API\n /api/sessions\n /api/sessions/{id}\n /api/sessions/{id}/bid/]
-    STORE[(In-memory\nSession Store)]
-    ENGINE[[Game Engine\ninternal/game]]
+    API[REST API<br/>/api/sessions<br/>/api/sessions/{id}<br/>/api/sessions/{id}/bid]
+    STORE[(In-memory<br/>Session Store)]
+    ENGINE[[Game Engine<br/>internal/game]]
   end
 
   UI -- HTTP(S) --> API
