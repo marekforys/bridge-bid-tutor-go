@@ -34,6 +34,8 @@
         <code id="sessionId">-</code>
         <span class="status">Dealer:</span>
         <span id="dealer" class="pill">-</span>
+        <span class="status">Current turn:</span>
+        <span id="currentTurn" class="pill">-</span>
         <span class="status">Auction complete:</span>
         <span id="complete" class="pill">-</span>
       </div>
@@ -62,7 +64,7 @@
         </select>
         <label for="bid">Bid</label>
         <input id="bid" placeholder="e.g. 1C, 2NT, Pass, X, XX" />
-        <button id="sendBidBtn">Send Bid</button>
+        <button id="sendBidBtn" disabled>Send Bid</button>
         <button id="refreshBtn" class="secondary">Refresh</button>
       </div>
       <div class="status" id="message" style="margin-top:8px"></div>

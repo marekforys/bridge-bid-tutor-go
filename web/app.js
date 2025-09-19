@@ -26,6 +26,15 @@ function render(state) {
   el('sessionId').textContent = state.id;
   el('dealer').textContent = state.dealer;
   el('complete').textContent = String(state.complete);
+  // Show current turn (same as dealer)
+  const current = state.dealer;
+  const turnEl = el('currentTurn');
+  if (turnEl) turnEl.textContent = current;
+
+  // Auto-select current dealer as position to reduce mistakes
+  if (el('position')) {
+    el('position').value = current;
+  }
 
   const players = state.players.map(p => {
     return `<div style="margin-bottom:8px">
@@ -42,6 +51,9 @@ function render(state) {
     a.pass ? 'Pass' : (a.redouble ? 'XX' : (a.double ? 'X' : `${a.level}${a.strain}`))
   }</td></tr>`).join('');
   el('auction').innerHTML = rows || '<tr><td colspan="2">No bids yet</td></tr>';
+
+  // Update bid button enabled/disabled state
+  updateBidAvailability(state);
 }
 
 async function main() {
@@ -94,6 +106,30 @@ async function main() {
       el('message').textContent = e.message;
     }
   });
+
+  // Recompute availability when user changes position or bid input
+  el('position').addEventListener('change', () => updateBidAvailability(lastState));
+  el('bid').addEventListener('input', () => updateBidAvailability(lastState));
 }
 
 window.addEventListener('DOMContentLoaded', main);
+
+function updateBidAvailability(state) {
+  const btn = el('sendBidBtn');
+  if (!btn) return;
+  if (!state) { btn.disabled = true; return; }
+  const pos = el('position').value;
+  const dealer = state.dealer;
+  const complete = !!state.complete;
+  const bidValue = (el('bid').value || '').trim();
+  const can = !complete && pos === dealer && bidValue.length > 0;
+  btn.disabled = !can;
+  const msg = el('message');
+  if (complete) {
+    msg.textContent = 'Auction is complete';
+  } else if (pos !== dealer) {
+    msg.textContent = `It is ${dealer}'s turn to bid`;
+  } else {
+    // keep current message if any
+  }
+}
