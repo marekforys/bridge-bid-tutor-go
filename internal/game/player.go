@@ -164,6 +164,47 @@ func (p *Player) makeOpeningBid(auction *Auction, hcp int, distribution map[Suit
 
 // makeResponseBid handles the logic for responding to a partner's bid using Polish Club principles.
 func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, distribution map[Suit]int) Bid {
+	// --- Blackwood/Gerber Initiation ---
+	// After a suit agreement or NT bid, check for slam interest
+	if hcp >= 16 {
+		// Get the last non-pass bid
+		if lastBid, ok := auction.LastNonPassBid(); ok {
+			// If we have a suit agreement or NT, consider Blackwood
+			if lastBid.Level >= 3 && (lastBid.Strain < 4 || lastBid.Strain == 4) {
+				// Use Gerber (4♣) over NT, Blackwood (4NT) otherwise
+				if lastBid.Strain == 4 { // NT contract
+					return NewBid(4, 0) // Gerber (4♣)
+				} else {
+					return NewBid(4, 4) // Blackwood (4NT)
+				}
+			}
+		}
+	}
+	// --- 1NT Response Logic ---
+	// After 1NT opening (1NT = 15-17 HCP, balanced)
+	if partnerBid.Level == 1 && partnerBid.Strain == 4 {
+		// 1. Check for transfers first (5+ card majors take priority over Stayman)
+		if hcp >= 5 {
+			// With 5+ hearts, transfer to hearts (2♦)
+			if distribution[Hearts] >= 5 {
+				return NewBid(2, Diamonds)
+			}
+			// With 5+ spades, transfer to spades (2♥)
+			if distribution[Spades] >= 5 {
+				return NewBid(2, Hearts)
+			}
+		}
+
+		// 2. Check for Stayman (4-card majors, 8+ HCP)
+		if hcp >= 8 && (distribution[Hearts] >= 4 || distribution[Spades] >= 4) {
+			return NewBid(2, Clubs)
+		}
+
+		// 3. With 0-7 HCP and no fit, pass
+		if hcp < 8 {
+			return NewPass()
+		}
+	}
 	// --- Responses to 1♣ Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == Clubs {
 		// Negative response: 0-6 HCP.
@@ -261,8 +302,127 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 }
 
 
+// countKeyCards returns the number of key cards (Aces for Blackwood, Aces+Kings for Gerber)
+func countKeyCards(hand *Hand, countKings bool) int {
+	keyCards := 0
+	for _, card := range hand.Cards {
+		switch card.Rank {
+		case Ace:
+			keyCards++
+		case King:
+			if countKings {
+				keyCards++
+			}
+		}
+	}
+	return keyCards
+}
+
 // makeRebid handles the logic for making a rebid after our partner has responded.
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
+	// --- Responding to Blackwood/Gerber ---
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (Blackwood)
+		keyCards := countKeyCards(p.Hand, true) // Count Aces + King of trump
+		switch keyCards {
+		case 0, 4: // 0 or 4 key cards
+			return NewBid(5, 0) // 5♣
+		case 1:
+			return NewBid(5, 1) // 5♦
+		case 2:
+			return NewBid(5, 2) // 5♥
+		case 3:
+			return NewBid(5, 3) // 5♠
+		}
+	}
+
+	// Gerber response (4♣ over NT)
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 0 && // Partner bid 4♣
+	   myLastBid != nil && myLastBid.Strain == 4 { // And we're in a NT contract
+		aces := countKeyCards(p.Hand, false) // Count only Aces for Gerber
+		switch aces {
+		case 0, 4: // 0 or 4 Aces
+			return NewBid(4, 1) // 4♦
+		case 1:
+			return NewBid(4, 2) // 4♥
+		case 2:
+			return NewBid(4, 3) // 4♠
+		case 3:
+			return NewBid(4, 4) // 4NT
+		}
+	}
+	// --- Blackwood Convention (4NT) ---
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (Blackwood)
+		keyCards := countKeyCards(p.Hand, true) // Count Aces + King of trump
+		switch keyCards {
+		case 0, 4: // 0 or 4 key cards
+			return NewBid(5, Clubs)
+		case 1:
+			return NewBid(5, Diamonds)
+		case 2:
+			return NewBid(5, Hearts)
+		case 3:
+			return NewBid(5, Spades)
+		}
+	}
+
+	// --- Gerber Convention (4♣ over NT) ---
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 0 && // Partner bid 4♣
+	   myLastBid != nil && myLastBid.Strain == 4 { // And we're in a NT contract
+		aces := countKeyCards(p.Hand, false) // Count only Aces for Gerber
+		switch aces {
+		case 0, 4: // 0 or 4 Aces
+			return NewBid(4, Diamonds)
+		case 1:
+			return NewBid(4, Hearts)
+		case 2:
+			return NewBid(4, Spades)
+		case 3:
+			return NewBid(4, 4) // 4 represents NoTrump
+		}
+	}
+
+	// --- Responding to Jacoby Transfers after 1NT opening ---
+	// --- Responding to Jacoby Transfers after 1NT opening ---
+	if myLastBid.Level == 1 && myLastBid.Strain == 4 { // We opened 1NT
+		// 2♦ transfer to hearts
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Diamonds {
+			if distribution[Hearts] >= 3 {
+				// Super-accept with 3+ hearts and maximum hand (16-17 HCP)
+				if hcp >= 16 {
+					return NewBid(3, Hearts)
+				}
+			}
+			// Standard acceptance
+			return NewBid(2, Hearts)
+		}
+		// 2♥ transfer to spades
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Hearts {
+			if distribution[Spades] >= 3 {
+				// Super-accept with 3+ spades and maximum hand (16-17 HCP)
+				if hcp >= 16 {
+					return NewBid(3, Spades)
+				}
+			}
+			// Standard acceptance
+			return NewBid(2, Spades)
+		}
+		// Stayman response (2♣)
+		if partnerLastBid.Level == 2 && partnerLastBid.Strain == Clubs {
+			has4Hearts := distribution[Hearts] >= 4
+			has4Spades := distribution[Spades] >= 4
+			
+			switch {
+			case has4Hearts && has4Spades:
+				return NewBid(2, Hearts) // Prefer hearts with both majors
+			case has4Hearts:
+				return NewBid(2, Hearts)
+			case has4Spades:
+				return NewBid(2, Spades)
+			default:
+				return NewBid(2, Diamonds) // No 4-card major
+			}
+		}
+	}
     // --- Stayman Convention Response (after 1NT opening) ---
     if myLastBid.Level == 1 && myLastBid.Strain == 4 && // We opened 1NT
        partnerLastBid.Level == 2 && partnerLastBid.Strain == Clubs { // Partner bid 2♣ (Stayman)
