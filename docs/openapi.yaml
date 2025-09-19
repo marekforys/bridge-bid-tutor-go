@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: Bridge Bid Tutor REST API
+  description: |
+    REST API for creating bridge sessions, inspecting state, and posting bids.
+    Sessions are stored in-memory and reset on server restart.
+  version: 1.0.0
+  contact:
+    name: Bridge Bid Tutor
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /api/sessions:
+    post:
+      summary: Create a new session
+      operationId: createSession
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                example:
+                  value:
+                    id: "9b92f6ce-9c8a-4a95-9cdd-b0f4b6d9b1d1"
+                    dealer: "North"
+                    players:
+                      - position: "North"
+                        hcp: 12
+                        spades: "A K 9 5"
+                        hearts: "Q 8 3"
+                        diamonds: "J 7 4"
+                        clubs: "9 6 2"
+                      - position: "East"
+                        hcp: 9
+                        spades: "Q 10 7"
+                        hearts: "A 9 6 4"
+                        diamonds: "10 8 5"
+                        clubs: "K 7 3"
+                      - position: "South"
+                        hcp: 11
+                        spades: "J 4 3"
+                        hearts: "K 10 7 5"
+                        diamonds: "A Q 9"
+                        clubs: "J 10 5"
+                      - position: "West"
+                        hcp: 8
+                        spades: "8 6 2"
+                        hearts: "J 2"
+                        diamonds: "K 6 3 2"
+                        clubs: "A Q 8 4"
+                    auction: []
+                    complete: false
+  /api/sessions/{id}:
+    get:
+      summary: Get session state
+      operationId: getSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Session identifier (UUID)
+      responses:
+        '200':
+          description: Session state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+  /api/sessions/{id}/bid:
+    post:
+      summary: Submit a bid for the current dealer
+      operationId: postBid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Session identifier (UUID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostBidRequest'
+            examples:
+              example:
+                value:
+                  position: "North"
+                  bid: "1C"
+      responses:
+        '200':
+          description: Updated session state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid bid or format
+        '404':
+          description: Session not found
+        '409':
+          description: Not the specified position's turn to bid
+components:
+  schemas:
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dealer:
+          type: string
+          enum: [North, East, South, West]
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerSummary'
+        auction:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionBid'
+        complete:
+          type: boolean
+      required: [id, dealer, players, auction, complete]
+    PlayerSummary:
+      type: object
+      properties:
+        position:
+          type: string
+          enum: [North, East, South, West]
+        hcp:
+          type: integer
+          minimum: 0
+        spades:
+          type: string
+          description: Space-separated ranks (highest to lowest)
+        hearts:
+          type: string
+        diamonds:
+          type: string
+        clubs:
+          type: string
+      required: [position, hcp, spades, hearts, diamonds, clubs]
+    AuctionBid:
+      type: object
+      description: A bid already placed in the auction
+      properties:
+        position:
+          type: string
+          enum: [North, East, South, West]
+        level:
+          type: integer
+          minimum: 0
+          maximum: 7
+          description: Level 1-7 for contract; 0 for Pass/Double/Redouble
+        strain:
+          type: string
+          description: One of C, D, H, S, NT (omitted for Pass/Double/Redouble)
+        pass:
+          type: boolean
+        double:
+          type: boolean
+        redouble:
+          type: boolean
+      required: [position, pass, double, redouble]
+    PostBidRequest:
+      type: object
+      properties:
+        position:
+          type: string
+          enum: [North, East, South, West]
+        bid:
+          type: string
+          description: Contract like 1C, 2NT or special tokens Pass, X, XX
+      required: [position, bid]

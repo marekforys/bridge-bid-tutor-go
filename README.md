@@ -181,6 +181,18 @@ West (HCP: 13)
   go build ./...
   ```
 
+### API Documentation (OpenAPI)
+
+- OpenAPI spec: `docs/openapi.yaml`
+- View options:
+  - Upload to Swagger Editor: https://editor.swagger.io/
+  - Serve with Swagger UI Docker:
+    ```bash
+    docker run -p 8081:8080 -e SWAGGER_JSON=/docs/openapi.yaml -v $(pwd)/docs:/docs swaggerapi/swagger-ui
+    # open http://localhost:8081
+    ```
+  - Use Redocly CLI or VS Code Swagger extensions for local preview.
+
 ## Architecture
 
 ### Components
