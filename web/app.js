@@ -17,6 +17,15 @@ const API = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+  evaluateBid: async (sessionId, position, bid) => {
+    const res = await fetch('/api/evaluate-bid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, position, bid })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 
@@ -122,9 +131,24 @@ async function main() {
     // Normalize: uppercase and map single trailing N to NT
     bid = normalizeBid(bid);
     try {
+      // First evaluate the bid
+      const evaluation = await API.evaluateBid(sessionId, position, bid);
+      
+      // Show evaluation feedback
+      const messageEl = el('message');
+      if (evaluation.isRecommended) {
+        messageEl.textContent = 'Good bid!';
+        messageEl.className = 'status good-bid';
+      } else {
+        messageEl.textContent = evaluation.explanation || 'Consider a different bid';
+        messageEl.className = 'status bid-hint';
+      }
+      
+      // Then post the bid
       const state = await API.postBid(sessionId, position, bid);
       lastState = state;
       render(state);
+      
       // Auto-advance position to next dealer (server returns updated dealer)
       if (el('position')) {
         el('position').value = state.dealer;
@@ -132,7 +156,6 @@ async function main() {
       // Clear and focus bid input for next entry
       el('bid').value = '';
       el('bid').focus();
-      el('message').textContent = 'Bid accepted';
       updateBidAvailability(state);
     } catch (e) {
       el('message').textContent = e.message;

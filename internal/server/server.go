@@ -34,6 +34,7 @@ func New() *Server {
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/sessions", s.handleSessions)
 	mux.HandleFunc("/api/sessions/", s.handleSessionByID)
+	mux.HandleFunc("/api/evaluate-bid", s.handleEvaluateBid)
 }
 
 // handleSessions manages collection endpoints
@@ -291,6 +292,98 @@ func (s *Server) sessGet(id string) (*Session, bool) {
 	defer s.mu.RUnlock()
 	sess, ok := s.sessions[id]
 	return sess, ok
+}
+
+// handleEvaluateBid evaluates a bid and provides feedback
+func (s *Server) handleEvaluateBid(w http.ResponseWriter, r *http.Request) {
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		SessionID string `json:"sessionId"`
+		Position  string `json:"position"`
+		Bid       string `json:"bid"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	// Get the session
+	s.mu.RLock()
+	sess, ok := s.sessions[req.SessionID]
+	s.mu.RUnlock()
+
+	if !ok {
+		http.Error(w, "session not found", http.StatusNotFound)
+		return
+	}
+
+	// Parse position
+	pos, err := parsePosition(req.Position)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Parse the bid
+	bid, err := parseBid(req.Bid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Find the player
+	var player *gamepkg.Player
+	for _, p := range sess.Players {
+		if p.Position == pos {
+			player = p
+			break
+		}
+	}
+
+	if player == nil {
+		http.Error(w, "player not found", http.StatusNotFound)
+		return
+	}
+
+	// Get the AI's recommended bid
+	recommendedBid := player.MakeBid(sess.Auction)
+
+	// Check if the bid is the same as recommended
+	isRecommended := false
+	if bid.Pass && recommendedBid.Pass {
+		isRecommended = true
+	} else if bid.Double && recommendedBid.Double {
+		isRecommended = true
+	} else if bid.Redouble && recommendedBid.Redouble {
+		isRecommended = true
+	} else if bid.Level == recommendedBid.Level && bid.Strain == recommendedBid.Strain {
+		isRecommended = true
+	}
+
+	// Prepare response
+	response := map[string]interface{}{
+		"isRecommended": isRecommended,
+		"recommendedBid":  recommendedBid.String(),
+	}
+
+	// Add explanation if bid is not recommended
+	if !isRecommended {
+		hcp, _ := player.Hand.Evaluate()
+		explanation := fmt.Sprintf("With %d HCP, the recommended bid is %s", hcp, recommendedBid.String())
+		response["explanation"] = explanation
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 // writeJSON is a helper to encode responses
