@@ -202,15 +202,8 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
-		// Stayman Convention: 2♣ with 8+ HCP and at least one 4-card major
-		if hcp >= 8 && (distribution[Hearts] >= 4 || distribution[Spades] >= 4) {
-			bid := NewBid(2, Clubs) // Stayman
-			if auction.IsValidBid(bid) {
-				return bid
-			}
-		}
-
 		// Jacoby Transfers: Check for a 5-card major and 6+ HCP.
+		// This must come before Stayman to ensure proper transfer priority.
 		if hcp >= 6 {
 			if distribution[Hearts] >= 5 {
 				bid := NewBid(2, Diamonds) // Transfer to Hearts
@@ -226,9 +219,10 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 			}
 		}
 
-		// Stayman Convention: Check for 8+ HCP and a 4-card major.
-		if hcp >= 8 && (distribution[Hearts] >= 4 || distribution[Spades] >= 4) {
-			bid := NewBid(2, Clubs)
+		// Stayman Convention: 2♣ with 8+ HCP and at least one 4-card major
+		// Only use Stayman if we don't have a 5-card major (already handled by transfers)
+		if hcp >= 8 && (distribution[Hearts] == 4 || distribution[Spades] == 4) {
+			bid := NewBid(2, Clubs) // Stayman
 			if auction.IsValidBid(bid) {
 				return bid
 			}
