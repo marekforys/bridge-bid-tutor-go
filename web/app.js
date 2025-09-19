@@ -56,10 +56,10 @@ function render(state) {
     const badge = isDealer ? '<span class="badge">Current</span>' : '';
     return `<div class="${cls}" style="margin-bottom:8px">
       <div><b>${p.position}</b> — HCP: ${p.hcp} ${badge}</div>
-      <div>♠ ${p.spades}</div>
-      <div>♥ ${p.hearts}</div>
-      <div>♦ ${p.diamonds}</div>
-      <div>♣ ${p.clubs}</div>
+      <div><span class="suit-spades">♠</span> ${p.spades}</div>
+      <div><span class="suit-hearts">♥</span> ${p.hearts}</div>
+      <div><span class="suit-diamonds">♦</span> ${p.diamonds}</div>
+      <div><span class="suit-clubs">♣</span> ${p.clubs}</div>
     </div>`;
   }).join('');
   el('players').innerHTML = players;

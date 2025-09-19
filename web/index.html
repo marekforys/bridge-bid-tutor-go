@@ -5,32 +5,336 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bridge Bid Tutor - Web Client</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
-    header { padding: 16px 24px; background: #111827; border-bottom: 1px solid #334155; }
-    main { padding: 24px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
-    h1 { font-size: 18px; margin: 0; }
-    .card { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    button { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
-    button.secondary { background: #334155; color: #e2e8f0; }
-    input, select { background: #0b1220; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #1f2937; font-size: 14px; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #1f2937; font-size: 12px; }
-    .status { font-size: 12px; color: #9ca3af; }
-    .grid-1 { grid-column: span 2; }
-    code { background: #0b1220; padding: 2px 4px; border-radius: 6px; border: 1px solid #1f2937; }
-    .player { padding: 8px 10px; border-radius: 10px; }
-    .player.dealer { border: 1px solid #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.25) inset; }
-    .badge { display: inline-block; margin-left: 8px; padding: 2px 6px; border-radius: 9999px; background: #2563eb; color: white; font-size: 11px; }
+    :root {
+      --table-green: #0a5c36;
+      --table-border: #083a24;
+      --card-bg: #1a1a1a;
+      --card-border: #2d2d2d;
+      --text-light: #f0f0f0;
+      --text-muted: #b0b0b0;
+      --accent-blue: #4a8cff;
+      --accent-red: #ff4a4a;
+      --accent-valid: #2ecc71;
+      --accent-invalid: #e74c3c;
+    }
+
+    body { 
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; 
+      margin: 0; 
+      background: var(--table-green); 
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,0.05) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255,255,255,0.05) 0%, transparent 50%);
+      color: var(--text-light); 
+      line-height: 1.5;
+    }
+
+    header { 
+      padding: 16px 24px; 
+      background: rgba(0, 0, 0, 0.3); 
+      border-bottom: 1px solid var(--table-border);
+      backdrop-filter: blur(5px);
+    }
+
+    main { 
+      padding: 24px; 
+      display: grid; 
+      gap: 20px; 
+      grid-template-columns: 1fr 1fr;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3 { 
+      margin: 0 0 16px 0; 
+      font-weight: 500;
+      color: white;
+    }
+
+    .card { 
+      background: rgba(26, 26, 26, 0.9); 
+      border: 1px solid var(--card-border); 
+      border-radius: 12px; 
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .row { 
+      display: flex; 
+      gap: 10px; 
+      align-items: center; 
+      flex-wrap: wrap; 
+      margin-bottom: 12px;
+    }
+
+    button { 
+      background: var(--accent-blue); 
+      color: white; 
+      border: none; 
+      border-radius: 8px; 
+      padding: 10px 16px; 
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background: #3a7de8;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    button.secondary { 
+      background: #444; 
+      color: var(--text-light);
+    }
+
+    button.secondary:hover {
+      background: #555;
+    }
+
+    input, select { 
+      background: rgba(0, 0, 0, 0.3); 
+      color: var(--text-light); 
+      border: 1px solid #444; 
+      border-radius: 8px; 
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(74, 140, 255, 0.3);
+    }
+
+    table { 
+      width: 100%; 
+      border-collapse: separate;
+      border-spacing: 0;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td { 
+      text-align: left; 
+      padding: 10px 12px; 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+      font-size: 14px; 
+    }
+
+    th {
+      background: rgba(0, 0, 0, 0.3);
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .pill { 
+      display: inline-block; 
+      padding: 4px 10px; 
+      border-radius: 9999px; 
+      background: rgba(0, 0, 0, 0.3); 
+      font-size: 12px; 
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    .status { 
+      font-size: 12px; 
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .grid-1 { 
+      grid-column: span 2; 
+    }
+
+    code { 
+      background: rgba(0, 0, 0, 0.3); 
+      padding: 2px 6px; 
+      border-radius: 4px; 
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    .player { 
+      padding: 12px; 
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .player.dealer { 
+      background: rgba(0, 0, 0, 0.3);
+      border-left-color: var(--accent-blue);
+      box-shadow: 0 0 0 1px rgba(74, 140, 255, 0.2);
+    }
+
+    .badge { 
+      display: inline-block; 
+      margin-left: 8px; 
+      padding: 2px 8px; 
+      border-radius: 9999px; 
+      background: var(--accent-blue); 
+      color: white; 
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* Input validation visuals */
-    input.valid { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.25); }
-    input.invalid { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.25); }
+    input.valid { 
+      border-color: var(--accent-valid); 
+      box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2);
+    }
+
+    input.invalid { 
+      border-color: var(--accent-invalid); 
+      box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+    }
+
     /* Tooltip */
-    .help { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #334155; color: #e2e8f0; font-weight: 700; cursor: default; }
-    .tooltip { position: relative; display: inline-block; margin-left: 6px; }
-    .tooltip .tip { visibility: hidden; opacity: 0; position: absolute; z-index: 10; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0b1220; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; width: 260px; transition: opacity 0.15s ease; font-size: 12px; }
-    .tooltip:hover .tip { visibility: visible; opacity: 1; }
+    .help { 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      width: 20px; 
+      height: 20px; 
+      border-radius: 50%; 
+      background: rgba(255, 255, 255, 0.1); 
+      color: var(--text-muted); 
+      font-size: 12px;
+      font-weight: 700; 
+      cursor: help;
+      transition: all 0.2s;
+    }
+
+    .help:hover {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .tooltip { 
+      position: relative; 
+      display: inline-block; 
+      margin-left: 6px; 
+    }
+
+    .tooltip .tip { 
+      visibility: hidden; 
+      opacity: 0; 
+      position: absolute; 
+      z-index: 10; 
+      bottom: calc(100% + 8px); 
+      left: 50%; 
+      transform: translateX(-50%); 
+      background: rgba(26, 26, 26, 0.95); 
+      color: var(--text-light); 
+      border: 1px solid rgba(255, 255, 255, 0.1); 
+      border-radius: 8px; 
+      padding: 10px 14px; 
+      width: 280px; 
+      transition: opacity 0.15s ease; 
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .tooltip:hover .tip { 
+      visibility: visible; 
+      opacity: 1; 
+    }
+
+    /* Bid history header */
+    #bidHistory {
+      display: grid; 
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 1px; 
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px; 
+      padding: 1px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    #bidHistory > div {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    #bidHistory > div:first-child,
+    #bidHistory > div:nth-child(2),
+    #bidHistory > div:nth-child(3),
+    #bidHistory > div:nth-child(4) {
+      background: rgba(0, 0, 0, 0.4);
+      font-weight: 500;
+      color: var(--text-light);
+    }
+
+    /* Suit colors */
+    .suit-hearts,
+    .suit-diamonds {
+      color: #ff4a4a;  /* Red for hearts and diamonds */
+    }
+    
+    .suit-spades,
+    .suit-clubs {
+      color: var(--text-light);  /* White for spades and clubs */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+      
+      .grid-1 {
+        grid-column: span 1;
+      }
+      
+      .card {
+        padding: 16px;
+      }
+      
+      .row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      button, input, select {
+        width: 100%;
+        margin-bottom: 8px;
+      }
+    }
   </style>
 </head>
 <body>
