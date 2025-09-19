@@ -202,6 +202,14 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 
 	// --- Responses to 1NT Opening ---
 	if partnerBid.Level == 1 && partnerBid.Strain == 4 { // Partner opened 1NT
+		// Stayman Convention: 2♣ with 8+ HCP and at least one 4-card major
+		if hcp >= 8 && (distribution[Hearts] >= 4 || distribution[Spades] >= 4) {
+			bid := NewBid(2, Clubs) // Stayman
+			if auction.IsValidBid(bid) {
+				return bid
+			}
+		}
+
 		// Jacoby Transfers: Check for a 5-card major and 6+ HCP.
 		if hcp >= 6 {
 			if distribution[Hearts] >= 5 {
@@ -261,6 +269,57 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 
 // makeRebid handles the logic for making a rebid after our partner has responded.
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
+    // --- Stayman Convention Response (after 1NT opening) ---
+    if myLastBid.Level == 1 && myLastBid.Strain == 4 && // We opened 1NT
+       partnerLastBid.Level == 2 && partnerLastBid.Strain == Clubs { // Partner bid 2♣ (Stayman)
+        
+        // Check for 4-card majors in order of priority
+        if distribution[Hearts] >= 4 {
+            return NewBid(2, Hearts) // Show 4+ hearts
+        }
+        if distribution[Spades] >= 4 {
+            return NewBid(2, Spades) // Show 4+ spades (but no 4 hearts)
+        }
+        return NewBid(2, Diamonds) // No 4-card major
+    }
+
+    // --- Responder's Follow-up After Stayman ---
+    // This handles the case where we (responder) used Stayman and now need to respond to opener's answer
+    if len(auction.Bids) >= 3 {
+        // Check if the auction went: 1NT - 2♣ - (opener's response) - now our turn
+        if auction.Bids[0].Level == 1 && auction.Bids[0].Strain == 4 && // 1NT opening
+           auction.Bids[1].Level == 2 && auction.Bids[1].Strain == Clubs && // Our Stayman
+           auction.Bids[1].Position == p.Position && // We are the one who bid Stayman
+           auction.Bids[2].Position != p.Position { // Last bid was from opener
+            
+            openerResponse := auction.Bids[2]
+            
+            // If opener showed a major, we can pass with a minimum hand (6-7 HCP)
+            if (openerResponse.Strain == Hearts || openerResponse.Strain == Spades) && hcp <= 7 {
+                return NewPass()
+            }
+            
+            // With 8+ HCP and a fit (we have 4+ in opener's major), bid game
+            if hcp >= 8 && distribution[openerResponse.Strain] >= 4 {
+                return NewBid(4, openerResponse.Strain) // Bid 4M
+            }
+            
+            // If no fit but invitational values, bid 2NT
+            if hcp >= 8 && hcp <= 9 {
+                return NewBid(2, 4) // 2NT
+            }
+            
+            // With a very strong hand (16+ HCP), consider slam
+            if hcp >= 16 {
+                // Simple approach: bid 4NT quantitative
+                return NewBid(4, 4) // 4NT
+            }
+            
+            // Default: pass if we don't have a clear bid
+            return NewPass()
+        }
+    }
+
     // Opener's replies over 2NT to responder's slam tools
     if myLastBid.Level == 2 && myLastBid.Strain == 4 {
         // Respond to Puppet Stayman (3C): show a 5-card major; else 3D = no 5M
