@@ -353,7 +353,7 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
             return NewPass()
         }
     }
- 
+
     // Responder's second turn after 1C - 1D - (opener strong rebid)
     // If we (current player) previously bid 1D and partner just made a 2-level rebid,
     // provide continuations per our simple scheme.

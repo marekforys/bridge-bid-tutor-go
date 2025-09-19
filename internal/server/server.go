@@ -39,6 +39,11 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 // handleSessions manages collection endpoints
 // POST /api/sessions -> create a new session
 func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -54,6 +59,11 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 // GET /api/sessions/{id}
 // POST /api/sessions/{id}/bid
 func (s *Server) handleSessionByID(w http.ResponseWriter, r *http.Request) {
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	path := strings.TrimPrefix(r.URL.Path, "/api/sessions/")
 	parts := strings.Split(path, "/")
 	if len(parts) == 0 || parts[0] == "" {
@@ -123,6 +133,7 @@ func (s *Server) newSession() *Session {
 // handlePostBid submits a bid for the current dealer of the session
 // Expects JSON: {"position":"North|East|South|West","bid":"3H|Pass|2NT|X|XX"}
 func (s *Server) handlePostBid(w http.ResponseWriter, r *http.Request, sess *Session) {
+	setCORSHeaders(w)
 	var req struct {
 		Position string `json:"position"`
 		Bid      string `json:"bid"`
@@ -284,7 +295,16 @@ func (s *Server) sessGet(id string) (*Session, bool) {
 
 // writeJSON is a helper to encode responses
 func writeJSON(w http.ResponseWriter, status int, payload any) {
+	setCORSHeaders(w)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// setCORSHeaders sets permissive CORS headers for browser clients
+func setCORSHeaders(w http.ResponseWriter) {
+	h := w.Header()
+	h.Set("Access-Control-Allow-Origin", "*")
+	h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
