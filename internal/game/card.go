@@ -13,6 +13,7 @@ const (
 	Diamonds
 	Hearts
 	Spades
+	NoTrump // Used for NT contracts in bidding
 )
 
 // Rank represents the rank of a card

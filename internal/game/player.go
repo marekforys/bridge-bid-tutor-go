@@ -302,73 +302,135 @@ func (p *Player) makeResponseBid(auction *Auction, partnerBid *Bid, hcp int, dis
 }
 
 
-// countKeyCards returns the number of key cards (Aces for Blackwood, Aces+Kings for Gerber)
-func countKeyCards(hand *Hand, countKings bool) int {
+// countKeyCards returns the number of key cards for Roman Key Card Blackwood (Aces + King of trump)
+// If trumpSuit is NoTrump, it counts only Aces (standard Blackwood)
+func countKeyCards(hand *Hand, trumpSuit Suit) (int, bool) {
 	keyCards := 0
+	hasQueenOfTrump := false
+
 	for _, card := range hand.Cards {
 		switch card.Rank {
 		case Ace:
 			keyCards++
 		case King:
-			if countKings {
+			// Count the King of the trump suit as a key card
+			if card.Suit == trumpSuit && trumpSuit != NoTrump {
 				keyCards++
+			}
+		case Queen:
+			// Check if we have the Queen of the trump suit
+			if card.Suit == trumpSuit && trumpSuit != NoTrump {
+				hasQueenOfTrump = true
 			}
 		}
 	}
-	return keyCards
+
+	// In standard Blackwood (NoTrump), there are only 4 key cards (Aces)
+	// In RKCB, there are 5 key cards (4 Aces + King of trump)
+	if trumpSuit == NoTrump {
+		return keyCards, false
+	}
+	return keyCards, hasQueenOfTrump
 }
 
 // makeRebid handles the logic for making a rebid after our partner has responded.
+// determineTrumpSuit finds the agreed trump suit from the auction history
+func (p *Player) determineTrumpSuit(auction *Auction) Suit {
+	// Look for the last suit agreement in the auction
+	for i := len(auction.Bids) - 1; i >= 0; i-- {
+		bid := auction.Bids[i]
+		if bid.Pass || bid.Double || bid.Redouble {
+			continue
+		}
+		// If we find a suit bid, return that suit
+		if bid.Strain < NoTrump {
+			return bid.Strain
+		}
+	}
+	// Default to NoTrump if no suit agreement found
+	return NoTrump
+}
+
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
-	// --- Responding to Blackwood/Gerber ---
+	// --- Responding to Roman Key Card Blackwood (1430) ---
 	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (Blackwood)
-		keyCards := countKeyCards(p.Hand, true) // Count Aces + King of trump
+		// Find the agreed trump suit from the auction
+		trumpSuit := p.determineTrumpSuit(auction)
+		
+		// Count key cards (Aces + King of trump) and check for Queen of trump
+		keyCards, hasQueenOfTrump := countKeyCards(p.Hand, trumpSuit)
+		
+		// 1430 responses:
 		switch keyCards {
 		case 0, 4: // 0 or 4 key cards
-			return NewBid(5, 0) // 5♣
-		case 1:
-			return NewBid(5, 1) // 5♦
-		case 2:
-			return NewBid(5, 2) // 5♥
-		case 3:
-			return NewBid(5, 3) // 5♠
+			if hasQueenOfTrump {
+				return NewBid(5, 1) // 5♦ (0 or 4 key cards with Queen)
+			}
+			return NewBid(5, 0) // 5♣ (0 or 4 key cards without Queen)
+		case 1, 3: // 1 or 3 key cards
+			if hasQueenOfTrump {
+				return NewBid(5, 3) // 5♠ (1 or 3 key cards with Queen)
+			}
+			return NewBid(5, 2) // 5♥ (1 or 3 key cards without Queen)
+		case 2: // 2 key cards
+			if hasQueenOfTrump {
+				return NewBid(5, 4) // 5NT (2 key cards with Queen)
+			}
+			return NewBid(5, 2) // 5♥ (2 key cards without Queen, same as 1/3 without Queen)
 		}
 	}
 
 	// Gerber response (4♣ over NT)
-	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 0 && // Partner bid 4♣
-	   myLastBid != nil && myLastBid.Strain == 4 { // And we're in a NT contract
-		aces := countKeyCards(p.Hand, false) // Count only Aces for Gerber
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == Clubs && // Partner bid 4♣
+	   myLastBid != nil && myLastBid.Strain == NoTrump { // And we're in a NT contract
+		// For Gerber, we only count Aces, and we don't care about the trump suit
+		aces, _ := countKeyCards(p.Hand, NoTrump) // Pass NoTrump to count only Aces
 		switch aces {
 		case 0, 4: // 0 or 4 Aces
-			return NewBid(4, 1) // 4♦
+			return NewBid(4, Diamonds) // 4♦
 		case 1:
-			return NewBid(4, 2) // 4♥
+			return NewBid(4, Hearts) // 4♥
 		case 2:
-			return NewBid(4, 3) // 4♠
+			return NewBid(4, Spades) // 4♠
 		case 3:
-			return NewBid(4, 4) // 4NT
+			return NewBid(4, NoTrump) // 4NT
 		}
 	}
-	// --- Blackwood Convention (4NT) ---
-	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (Blackwood)
-		keyCards := countKeyCards(p.Hand, true) // Count Aces + King of trump
+	// --- Roman Key Card Blackwood (1430) ---
+	// This is the initiation of RKCB - asking for key cards
+	if myLastBid.Level >= 4 && myLastBid.Level <= 6 && 
+	   partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (RKCB)
+		// Find the agreed trump suit from the auction
+		trumpSuit := p.determineTrumpSuit(auction)
+		
+		// Count key cards (Aces + King of trump) and check for Queen of trump
+		keyCards, hasQueenOfTrump := countKeyCards(p.Hand, trumpSuit)
+		
+		// 1430 responses:
 		switch keyCards {
 		case 0, 4: // 0 or 4 key cards
-			return NewBid(5, Clubs)
-		case 1:
-			return NewBid(5, Diamonds)
-		case 2:
-			return NewBid(5, Hearts)
-		case 3:
-			return NewBid(5, Spades)
+			if hasQueenOfTrump {
+				return NewBid(5, Diamonds) // 5♦ (0 or 4 key cards with Queen)
+			}
+			return NewBid(5, Clubs) // 5♣ (0 or 4 key cards without Queen)
+		case 1, 3: // 1 or 3 key cards
+			if hasQueenOfTrump {
+				return NewBid(5, Spades) // 5♠ (1 or 3 key cards with Queen)
+			}
+			return NewBid(5, Hearts) // 5♥ (1 or 3 key cards without Queen)
+		case 2: // 2 key cards
+			if hasQueenOfTrump {
+				return NewBid(5, NoTrump) // 5NT (2 key cards with Queen)
+			}
+			return NewBid(5, Hearts) // 5♥ (2 key cards without Queen, same as 1/3 without Queen)
 		}
 	}
 
 	// --- Gerber Convention (4♣ over NT) ---
-	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 0 && // Partner bid 4♣
-	   myLastBid != nil && myLastBid.Strain == 4 { // And we're in a NT contract
-		aces := countKeyCards(p.Hand, false) // Count only Aces for Gerber
+	if partnerLastBid.Level == 4 && partnerLastBid.Strain == Clubs && // Partner bid 4♣
+	   myLastBid != nil && myLastBid.Strain == NoTrump { // And we're in a NT contract
+		// For Gerber, we only count Aces, and we don't care about the trump suit
+		aces, _ := countKeyCards(p.Hand, NoTrump) // Pass NoTrump to count only Aces
 		switch aces {
 		case 0, 4: // 0 or 4 Aces
 			return NewBid(4, Diamonds)
@@ -377,7 +439,7 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
 		case 2:
 			return NewBid(4, Spades)
 		case 3:
-			return NewBid(4, 4) // 4 represents NoTrump
+			return NewBid(4, NoTrump)
 		}
 	}
 
