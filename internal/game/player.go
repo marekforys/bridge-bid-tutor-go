@@ -351,6 +351,115 @@ func (p *Player) determineTrumpSuit(auction *Auction) Suit {
 	return NoTrump
 }
 
+// hasFirstRoundControl checks if the hand has first-round control (Ace or void) in a suit
+func (p *Player) hasFirstRoundControl(suit Suit) bool {
+	// Check for void
+	if p.Hand.SuitCount(suit) == 0 {
+		return true
+	}
+	// Check for Ace
+	for _, card := range p.Hand.Cards {
+		if card.Suit == suit && card.Rank == Ace {
+			return true
+		}
+	}
+	return false
+}
+
+// hasSecondRoundControl checks if the hand has second-round control (King or singleton) in a suit
+func (p *Player) hasSecondRoundControl(suit Suit) bool {
+	length := p.Hand.SuitCount(suit)
+	// Check for singleton
+	if length == 1 {
+		return true
+	}
+	// Check for King
+	for _, card := range p.Hand.Cards {
+		if card.Suit == suit && card.Rank == King {
+			return true
+		}
+	}
+	return false
+}
+
+// findNextCueBid finds the next suit to cue bid, starting from the lowest suit
+// Returns the suit to bid and whether a cue bid was found
+func (p *Player) findNextCueBid(auction *Auction, trumpSuit Suit, lastCueSuit Suit) (Suit, bool) {
+	// Start from the suit after the last cued suit, or from the lowest suit if no previous cue
+	startSuit := lastCueSuit + 1
+	if lastCueSuit == NoTrump {
+		startSuit = Clubs
+	}
+
+	// Check each suit in order (Clubs, Diamonds, Hearts, Spades)
+	for s := startSuit; s < NoTrump; s++ {
+		// Skip the trump suit (we don't cue bid the trump suit)
+		if s == trumpSuit {
+			continue
+		}
+
+		// Check if this suit has already been cued in the auction
+		alreadyCued := false
+		for i := 0; i < len(auction.Bids); i++ {
+			bid := auction.Bids[i]
+			if bid.Strain == s && bid.Level >= 4 {
+				alreadyCued = true
+				break
+			}
+		}
+
+		// If not already cued and we have a control in this suit, return it
+		if !alreadyCued && (p.hasFirstRoundControl(s) || p.hasSecondRoundControl(s)) {
+			return s, true
+		}
+	}
+
+	// No more suits to cue
+	return NoTrump, false
+}
+
+// isSuitAgreement checks if a suit has been agreed upon in the auction
+func (p *Player) isSuitAgreement(auction *Auction, suit Suit) bool {
+	if suit == NoTrump {
+		return false
+	}
+	
+	// Count how many times the suit has been bid by the partnership
+	count := 0
+	for _, bid := range auction.Bids {
+		if (bid.Position == p.Position || bid.Position == p.Position.Partner()) && 
+		   !bid.Pass && !bid.Double && !bid.Redouble && bid.Strain == suit {
+			count++
+			if count >= 2 { // Both partners have bid this suit
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// findLastCueSuit finds the last suit that was cued in the auction
+func (p *Player) findLastCueSuit(auction *Auction, trumpSuit Suit) Suit {
+	// Start from the end of the auction and work backwards
+	for i := len(auction.Bids) - 1; i >= 0; i-- {
+		bid := auction.Bids[i]
+		// Skip passes, doubles, and redoubles
+		if bid.Pass || bid.Double || bid.Redouble {
+			continue
+		}
+		// Skip the trump suit and NoTrump
+		if bid.Strain == trumpSuit || bid.Strain == NoTrump {
+			continue
+		}
+		// If this is a cue bid (at the 4-level or higher), return the suit
+		if bid.Level >= 4 {
+			return bid.Strain
+		}
+	}
+	// No cue bids found
+	return NoTrump
+}
+
 func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp int, distribution map[Suit]int) Bid {
 	// --- Responding to Roman Key Card Blackwood (1430) ---
 	if partnerLastBid.Level == 4 && partnerLastBid.Strain == 4 { // Partner bid 4NT (Blackwood)
@@ -530,9 +639,35 @@ func (p *Player) makeRebid(auction *Auction, myLastBid, partnerLastBid *Bid, hcp
                 // Simple approach: bid 4NT quantitative
                 return NewBid(4, 4) // 4NT
             }
+        }
+    }
+
+    // --- Cue Bidding ---
+    // Check if we have an agreed trump suit
+    trumpSuit := p.determineTrumpSuit(auction)
+    if trumpSuit != NoTrump && p.isSuitAgreement(auction, trumpSuit) {
+        // Check if we're in a cue bidding sequence (after game or slam try)
+        if myLastBid.Level >= 4 || partnerLastBid.Level >= 4 {
+            // Find the last suit that was cued in the auction
+            lastCueSuit := p.findLastCueSuit(auction, trumpSuit)
             
-            // Default: pass if we don't have a clear bid
-            return NewPass()
+            // Find the next suit to cue
+            nextCueSuit, found := p.findNextCueBid(auction, trumpSuit, lastCueSuit)
+            if found {
+                // Make a cue bid in the next suit
+                return NewBid(4, nextCueSuit)
+            } else if lastCueSuit != NoTrump {
+                // No more suits to cue, return to the trump suit at the appropriate level
+                // This shows that we've shown all our controls
+                return NewBid(5, trumpSuit)
+            }
+        } else if partnerLastBid.Strain == trumpSuit && partnerLastBid.Level >= 4 {
+            // Partner has made a strong bid in the agreed suit, start showing controls
+            // Find the first suit to cue
+            nextCueSuit, found := p.findNextCueBid(auction, trumpSuit, NoTrump)
+            if found {
+                return NewBid(4, nextCueSuit)
+            }
         }
     }
 
