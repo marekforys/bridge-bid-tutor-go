@@ -134,43 +134,56 @@ func TestRomanKeyCardBlackwood(t *testing.T) {
 func TestBlackwoodInitiation(t *testing.T) {
 	tests := []struct {
 		name           string
-		responderHand  []Card
+		openerHand     []Card
 		auction       []Bid
-		shouldBid4NT   bool
+		expectedBid    Bid
 		description    string
 	}{
 		{
-			name: "Bid 4NT with all key cards",
-			responderHand: []Card{
-				{Suit: Spades, Rank: Ace},
-				{Suit: Hearts, Rank: Ace},
-				{Suit: Diamonds, Rank: Ace},
-				{Suit: Spades, Rank: King}, // King of trumps
+			name: "Respond to 4NT with all key cards",
+			openerHand: []Card{
+				{Suit: Spades, Rank: Ace},   // Key card (Ace)
+				{Suit: Spades, Rank: King},  // Key card (King of trumps)
+				{Suit: Hearts, Rank: Ace},   // Key card (Ace)
+				{Suit: Diamonds, Rank: Ace}, // Key card (Ace)
+				{Suit: Spades, Rank: Queen}, // Queen of trumps
+				// Add more cards to make a complete hand
+				{Suit: Hearts, Rank: Two},
+				{Suit: Diamonds, Rank: Three},
 			},
 			auction: []Bid{
-				{Level: 4, Strain: Spades, Position: North},
+				{Level: 4, Strain: Spades, Position: South},
+				{Level: 4, Strain: NoTrump, Position: North}, // Partner bids 4NT
 			},
-			shouldBid4NT: true,
-			description: "Should bid 4NT with all key cards",
+			expectedBid: NewBid(5, Diamonds), // 4 key cards with Queen
+			description: "Should respond 5♦ showing 4 key cards with Queen",
 		},
 		{
-			name: "Don't bid 4NT without enough key cards",
-			responderHand: []Card{
-				{Suit: Spades, Rank: Ace}, // Only 1 key card
+			name: "Respond to 4NT with no key cards",
+			openerHand: []Card{
+				// No key cards
+				{Suit: Spades, Rank: Two},
+				{Suit: Hearts, Rank: Three},
+				{Suit: Diamonds, Rank: Four},
+				{Suit: Clubs, Rank: Five},
+				// Add more cards to make a complete hand
+				{Suit: Spades, Rank: Six},
+				{Suit: Hearts, Rank: Seven},
 			},
 			auction: []Bid{
-				{Level: 4, Strain: Spades, Position: North},
+				{Level: 4, Strain: Hearts, Position: South},
+				{Level: 4, Strain: NoTrump, Position: North}, // Partner bids 4NT
 			},
-			shouldBid4NT: false,
-			description: "Should not bid 4NT with only 1 key card",
+			expectedBid: NewBid(5, Clubs), // 0 key cards without Queen
+			description: "Should respond 5♣ showing 0 key cards without Queen",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up the responder with the test hand
-			responder := NewPlayer(South)
-			responder.Hand = NewHand(tt.responderHand)
+			// Set up the player with the test hand
+			player := NewPlayer(South)
+			player.Hand = NewHand(tt.openerHand)
 
 			// Set up the auction
 			auction := NewAuction()
@@ -178,15 +191,14 @@ func TestBlackwoodInitiation(t *testing.T) {
 				auction.AddBid(bid)
 			}
 
-			// Get the responder's bid
-			bid := responder.MakeBid(auction)
+			// Get the player's bid
+			bid := player.MakeBid(auction)
 
-			// Check if the bid is 4NT when expected
-			is4NT := bid.Level == 4 && bid.Strain == NoTrump
-			if is4NT != tt.shouldBid4NT {
-				t.Errorf("%s\nExpected 4NT: %v, but got: %s", 
+			// Verify the bid matches the expected bid
+			if bid.Level != tt.expectedBid.Level || bid.Strain != tt.expectedBid.Strain {
+				t.Errorf("%s\nExpected: %s\nGot: %s", 
 					tt.description, 
-					tt.shouldBid4NT, 
+					tt.expectedBid, 
 					bid)
 			}
 		})
